@@ -56,7 +56,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - _Functional programming imposes discipline upon assignment_.
 - each of these paradigms __removes__ capabilities from the programmer, none of them adds new ones. Each imposes some kind of extra discipline that is negative in its intent. The paradigms tell us __what not to do__, more than they tell us __what to do__. They removed `goto` statements, function pointers, and assignement.
 
-## 4. Structured programming
+## 4. Structured Programming
 
 -  _Dijkstra_ discovered that certain uses of `goto` statements prevent modules from being __decomposed recursively__ into smaller and smaller units, thereby preventing use of the __divide-and-conquer__ approach necessary for reasonable proofs.
 - Other uses of `goto`, however, did not have this problem. Dijkstra realized that these “good” uses of goto corresponded to simple __selection__ and __iteration__ control structures such as `if/then/else` and `do/while`. Modules that used
@@ -145,3 +145,149 @@ double Point::distance(const Point& p) const {
 - For these reasons, it is difficult to accept that OO depends on __strong encapsulation__. Indeed, many OO languages have little or no enforced encapsulation.
 
 ### Inheritance?
+
+- Inheritance is simply the __redeclaration__ of a group of variables and functions within an __enclosing scope__. This is something C programmers were able to do manually long before there was an OO languag.
+- `namedPoint.h`:
+```c
+struct NamedPoint;
+struct NamedPoint* makeNamedPoint(double x, double y, char* name);
+void setName(struct NamedPoint* np, char* name);
+char* getName(struct NamedPoint* np);
+```
+- `namedPoint.c`:
+```c
+#include "namedPoint.h"
+#include <stdlib.h>
+
+struct NamedPoint {
+    double x,y;
+    char* name;
+};
+struct NamedPoint* makeNamedPoint(double x, double y, char* name) {
+    struct NamedPoint* p = malloc(sizeof(struct NamedPoint));
+    p->x = x;
+    p->y = y;
+    p->name = name;
+    return p;
+}
+
+void setName(struct NamedPoint* np, char* name) {
+    np->name = name;
+}
+
+char* getName(struct NamedPoint* np) {
+    return np->name;
+}
+```
+- `main.c`:
+```c
+#include "point.h"
+#include "namedPoint.h"
+#include <stdio.h>
+
+int main(int ac, char** av) {
+    struct NamedPoint* origin = makeNamedPoint(0.0, 0.0, "origin");
+    struct NamedPoint* upperRight = makeNamedPoint(1.0, 1.0, "upperRight");
+    printf("distance=%f\n", distance( 
+        (struct Point*) origin, (struct Point*) upperRight));
+}
+```
+- If you look carefully at the `main` program, you’ll see that the `NamedPoint` data structure acts as though it is a derivative of the `Point` data structure.
+- This is because the __order__ of the first two fields in `NamedPoint` is the __same__ as `Point`.
+- We had a trick, but it’s not nearly as __convenient__ as __true inheritance__. Moreover, __multiple inheritance__ is a considerably more difficult to achieve by such trickery.
+- To recap: We can award no point to OO for encapsulation, and perhaps a half-point for inheritance. So far, that’s not such a great score :stuck_out_tongue:.
+
+### Polymorphism?
+
+```c
+#include <stdio.h>
+
+void copy() {
+    int c;
+    while ((c=getchar()) != EOF)
+        putchar(c);
+}
+```
+- The function `getchar()` reads from `STDIN`. But which device is STDIN? 
+- The `putchar()` function writes to `STDOUT`. But which device is that?
+- These functions are polymorphic—their behavior depends on the type of `STDIN` and `STDOUT`.
+- So how does the call to `getchar()` actually get delivered to the device driver that reads the character?
+- The UNIX operating system __requires__ that every IO device driver provide five standard functions: `open, close, read, write, and seek`. The signatures of those functions must be __identical__ for every IO driver.
+- The `FILE` data structure contains five pointers to functions. In our example, it might look like this:
+```c
+struct FILE {
+    void (*open)(char* name, int mode);
+    void (*close)();
+    int (*read)();
+    void (*write)(char);
+    void (*seek)(long index, int mode);
+};
+```
+- The IO driver for the console will define those functions and load up a `FILE` data structure with their addresses—something like this:
+```c
+#include "file.h"
+
+void open(char* name, int mode) {/*...*/}
+void close() {/*...*/};
+int read() {int c;/*...*/ return c;}
+void write(char c) {/*...*/}
+void seek(long index, int mode) {/*...*/}
+
+struct FILE console = {open, close, read, write, seek};
+```
+- Now if `STDIN` is defined as a `FILE*`, and if it points to the console data structure, then `getchar()` might be implemented this way:
+```c
+extern struct FILE* STDIN;
+
+int getchar() {
+    return STDIN->read();
+}
+```
+- In other words, `getchar()` simply calls the function pointed to by the read pointer of the `FILE` data structure pointed to by `STDIN`.
+- This simple trick is the basis for all polymorphism in OO. In C++, for example, every __virtual function__ within a class has a pointer in a table called a _vtable_, and all calls to virtual functions go through that table. Constructors of derivatives simply load their versions of those functions into the vtable of the object being created.
+- The bottom line is that polymorphism is an __application of pointers to functions__.
+- Programmers have been using pointers to functions to achieve polymorphic behavior since _Von Neumann_ architectures were first implemented in the late 1940s. 
+- In other words, OO has provided nothing new. Ah, but that’s not quite correct. OO languages may not have given us polymorphism, but they have made it __much safer and much more convenient__.
+- OO is the ability, through the use of polymorphism, to gain __absolute control__ over every __source code dependency__ in the system. It allows the architect to create a __plugin__ architecture, in which modules that contain __high-level policies__ are __independent__ of modules that contain __low-level details__. The low-level details are relegated to plugin modules that can be deployed and developed independently from the modules that contain __high-level policies__.
+
+## Chapter 6: Functional Programming
+
+- In many ways, the concepts of functional programming predate programming itself. This paradigm is strongly based on the __lambda-calculus__ invented by `Alonzo Church` in the 1930s.
+- Variables in functional languages __do not vary__.
+- Why ? All __race conditions__, __deadlock conditions__, and __concurrent update__ problems are due to mutable variables.
+- __Immutability__ can be practicable, if certain compromises are made.
+    - __Segregation of Mutability__: The immutable components perform their tasks in a purely functional way, without using any mutable variables. The immutable components communicate with one or more other components that are not purely functional, and allow for the state of variables to be mutated. <p align="center"><img src="assets/segregation-of-mutability.png" width="400px" height="auto"></p>
+        - Since mutating state exposes those components to all the problems of concurrency, it is common practice to use some kind of __transactional__ memory to protect the mutable variables from concurrent updates and race conditions. Transactional memory simply treats variables in memory the same way a database treats records on disk. It protects those variables with a transactionor retry-based scheme.
+    - __Event Sourcing__: is a strategy wherein we store the __transactions, but not the state__. When state is required, we simply apply all the transactions from the beginning of time.
+        - The more memory we have, and the faster our machines are, the less we need mutable state.
+        - If we have enough storage and enough processor power, we can make our applications entirely immutable—and, therefore, entirely functional.
+
+### Chapter 7 SRP: The Single Responsibility Principle
+
+- :eyes: does not mean that every module should do just one thing.
+- But means instead that _a module should be responsible to one, and only one, actor_.
+- My favorite example is the `Employee` class from a payroll application. It has three methods: `calculatePay()`, `reportHours()`, and `save()`. <p align="center"><img src="assets/spr.png"></p>
+- This class violates the SRP because those three methods are responsible to three very different actors.
+    - The `calculatePay()` method is specified by the accounting department, which reports to the CFO.
+    - The `reportHours()` method is specified and used by the human resources department, which reports to the COO.
+    - The `save()` method is specified by the database administrators (DBAs), who report to the CTO.
+- Many problems occur because we put code that __different actors__ depend on into __close proximity__. The SRP says to
+separate the code that different actors depend on.
+
+### Chapter 8 OCP: The Open-Closed Principle
+
+- The Open-Closed Principle (OCP) was coined in 1988 by _Bertrand Meyer_. It says: _A software artifact should be open for extension but closed for modification_.
+- In other words, the behavior of a software artifact ought to be extendible, without having to modify that artifact.
+
+#### A Thought Experiment
+
+- Imagine, for a moment, that we have a system that displays a financial summary on a web page. The data on the page is scrollable, and negative numbers are rendered in red.
+- Now imagine that the stakeholders ask that this same information be turned into a report to be printed on a black-and-white printer. The report should be properly paginated, with appropriate page headers, page footers, and column labels. Negative numbers should be surrounded by parentheses.
+- Clearly, some new code must be written. But how much old code will have to change?
+- A good software architecture would reduce the amount of changed code to the barest minimum. __Ideally, zero__.
+- The essential insight here is that generating the report involves __two separate responsibilities__:
+    - the calculation of the reported data;
+    - and the presentation of that data into a web and printer-friendly form. <p align="center"><img src="assets/ocp.png"></p>
+- Classes marked with `<I>` are __interfaces__; those marked with `<DS>` are __data structures__. Open arrowheads are using __relationships__. Closed arrowheads are implements or __inheritance__ relationships.
+-  An arrow pointing from class `A` to class B means that the source code of class A mentions the name of class B, but class B mentions __nothing about__ class `A`. Thus, `FinancialDataMapper` knows about `FinancialDataGateway` through an implements relationship, but `FinancialGateway` knows nothing at all about `FinancialDataMapper`.
+- The next thing to notice is that each double line is crossed in __one direction only__. This means that all component relationships are __unidirectional__.  These arrows point toward the components that we want to __protect from change__. <p align="center"><img src="assets/components-relationships-uni.png"></p>
