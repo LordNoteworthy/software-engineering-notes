@@ -288,6 +288,12 @@ separate the code that different actors depend on.
 - The essential insight here is that generating the report involves __two separate responsibilities__:
     - the calculation of the reported data;
     - and the presentation of that data into a web and printer-friendly form. <p align="center"><img src="assets/ocp.png"></p>
-- Classes marked with `<I>` are __interfaces__; those marked with `<DS>` are __data structures__. Open arrowheads are using __relationships__. Closed arrowheads are implements or __inheritance__ relationships.
--  An arrow pointing from class `A` to class B means that the source code of class A mentions the name of class B, but class B mentions __nothing about__ class `A`. Thus, `FinancialDataMapper` knows about `FinancialDataGateway` through an implements relationship, but `FinancialGateway` knows nothing at all about `FinancialDataMapper`.
-- The next thing to notice is that each double line is crossed in __one direction only__. This means that all component relationships are __unidirectional__.  These arrows point toward the components that we want to __protect from change__. <p align="center"><img src="assets/components-relationships-uni.png"></p>
+- Classes marked with `<I>` are __interfaces__; those marked with `<DS>` are __data structures__. 
+- Open arrowheads are using __relationships__. Closed arrowheads are implements or __inheritance__ relationships.
+- An arrow pointing from class `A` to class `B` means that the source code of class `A` mentions the name of class `B`, but class `B` mentions __nothing about__ class `A`. Thus, `FinancialDataMapper` knows about `FinancialDataGateway` through an implements relationship, but `FinancialGateway` knows nothing at all about `FinancialDataMapper`.
+- The next thing to notice is that each double line is crossed in __one direction only__. This means that all component relationships are __unidirectional__. These arrows point toward the components that we want to __protect from change__. <p align="center"><img src="assets/components-relationships-uni.png"></p>
+- We want to protect the _Controller_ from changes in the _Presenters_. We want to protect the _Presenters_ from changes in the _Views_. We want to protect the _Interactor_ from changes in—well, anything. 
+- The _Interactor_ is in the position that best conforms to the OCP. Changes to the Database, or the Controller, or the Presenters, or the Views, will have __no impact__ on the Interactor. Why should the _Interactor_ hold such a privileged position? Because it contains the __business rules__. The Interactor contains the __highest-level policies__ of the application. All the other components are dealing with peripheral concerns. The _Interactor_ deals with the __central concern__.
+- This is how the OCP works at the architectural level. Architects separate functionality based on how, why, and when it changes, and then organize that separated functionality into a hierarchy of components. __Higher-level__ components in that hierarchy are __protected__ from the changes made to __lower-level__ components.
+
+### Chapter 9 LSP: The Liskov Substitution Principle
