@@ -307,3 +307,26 @@ separate the code that different actors depend on.
 - :arrow_forward: A simple violation of __substitutability__, can cause a system’s architecture to be polluted with a significant amount of extra mechanisms.
 
 ### Chapter 10 ISP: The Interface Segregation Principle
+
+- The Interface Segregation Principle (ISP) derives its name from the diagram below: <p align="center"><img src="assets/isp.png"></p>
+- In the situation illustrated in above, there are several users who use the operations of the `OPS` class. Let’s assume that `User1` uses only `op1`, `User2` uses only `op2`, and `User3` uses only `op3`.
+- Now imagine that `OPS` is a class written in a language like Java. Clearly, in that case, the source code of `User1` will __inadvertently depend__ on `op2` and `op3`, even though it doesn’t call them. This dependence means that a change to the source code of `op2` in `OPS` will force `User1` to be __recompiled and redeployed__, even though nothing that it cared about has actually changed.
+- This problem can be resolved by __segregating the operations into interfaces__: <p align="center"><img src="assets/isp-segregated-ops.png"></p>
+
+#### ISP and Language
+
+- Clearly, the previously given description depends critically on language type. __Statically typed languages__ like Java force programmers to create declarations that users must `import`, or use, or otherwise `include`. It is these included
+declarations in source code that create the source code dependencies that __force recompilation and redeployment__.
+- In __dynamically typed__ languages like Ruby and Python, such declarations don’t exist in source code. Instead, they are inferred at __runtime__. Thus there are no source code dependencies to force recompilation and redeployment. This is
+the primary reason that dynamically typed languages create systems that are __more flexible and less tightly coupled__ than statically typed languages.
+- :arrow_forward: This fact could lead you to conclude that the ISP is a language issue, rather than an architecture issue.
+
+#### ISP and Architecture
+
+- In general, it is __harmful__ to depend on modules that contain __more than you need__. This is obviously true for source code dependencies that can force unnecessary recompilation and redeployment—but it is also true at a much higher, __architectural level__.
+- Consider, for example, an architect working on a system, S. He wants to include a certain framework, F, into the system. Now suppose that the authors of F have bound it to a particular database, D. So S depends on F. which depends on D. <p align="center"><img src="assets/isp-problematic-architecture.png"></p>.
+-  Now suppose that D contains features that F does not use and, therefore, that S does not care about. Changes to those features within D may well force the redeployment of F and, therefore, the redeployment of S. Even worse, a failure of one of the features within D may cause failures in F and S.
+
+### Chapter 11 DIP: Dependency Inversion Principle
+
+- The Dependency Inversion Principle (DIP) tells us that the most flexible systems are those in which source code dependencies refer only to __abstractions, not to concretions__.
