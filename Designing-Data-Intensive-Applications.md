@@ -2,108 +2,103 @@
 
 notes taken from reading the _Designing Data Intensive Applications_ book by Martin Kleppmann.
 
-
 ## Chapter 1. Reliable, Scalable and Maintainable Applications
 
-- A data-intensive application is typically built from standard building blocks which provide commonly needed functionality. 
-    - Store data so that they, or another application, can find it again later (__databases__),
-    - Remember the result of an expensive operation, to speed up reads (__caches__),
-    - Allow users to search data by keyword or filter it in various ways (__search indexes__),
-    - Send a message to another process, to be handled asynchronously (__message queues__),
-    - Observe what is happening, and act on events as they occur (__stream processing__),
-    - Periodically crunch a large amount of accumulated data (__batch processing__).
+- A data-intensive application is typically built from standard building blocks which provide commonly needed functionality.
+  - Store data so that they, or another application, can find it again later (**databases**),
+  - Remember the result of an expensive operation, to speed up reads (**caches**),
+  - Allow users to search data by keyword or filter it in various ways (**search indexes**),
+  - Send a message to another process, to be handled asynchronously (**message queues**),
+  - Observe what is happening, and act on events as they occur (**stream processing**),
+  - Periodically crunch a large amount of accumulated data (**batch processing**).
 
 ### Thinking About Data Systems
 
 - Even though each category of these systems serves a specific purpose, many new tools for data storage and processing have emerged that are optimized for a variety of different use cases:
-    - For example, there are data stores that are also used as __message queues (Redis)__,
-    - and there are __message queues with database-like durability guarantees (Kafka)__,
-    - => the boundaries between the categories are becoming __blurred__.
+  - For example, there are data stores that are also used as **message queues (Redis)**,
+  - and there are **message queues with database-like durability guarantees (Kafka)**,
+  - => the boundaries between the categories are becoming **blurred**.
 - If you are designing a data system or service, a lot of tricky questions arise:
-    - How do you ensure that the data remains correct and complete, even when things go wrong internally?
-    - How do you provide consistently good performance to clients, even when parts of your system are degraded?
-    - How do you scale to handle an increase in load? What does a good API for the service look like?
+  - How do you ensure that the data remains correct and complete, even when things go wrong internally?
+  - How do you provide consistently good performance to clients, even when parts of your system are degraded?
+  - How do you scale to handle an increase in load? What does a good API for the service look like?
 - We focus on three concerns that are important in most software systems:
-    - Reliability
-    - Scalability
-    - Maintainability
+  - Reliability
+  - Scalability
+  - Maintainability
 
 ### Reliability
 
 - We understand reliability as meaning, roughly: _continuing to work correctly, even when things go wrong_.
-- The things that can go wrong are called __faults__, and systems that anticipate faults and can cope with them are called __fault-tolerant__.
-- Note that a fault is not the same as a __failure__ for an overview of the terminology. A __fault__ is usually defined as __one__ component of the system __deviating from its spec__, whereas a __failure__ is when the system as a __whole__ stops providing the required service to the user.
+- The things that can go wrong are called **faults**, and systems that anticipate faults and can cope with them are called **fault-tolerant**.
+- Note that a fault is not the same as a **failure** for an overview of the terminology. A **fault** is usually defined as **one** component of the system **deviating from its spec**, whereas a **failure** is when the system as a **whole** stops providing the required service to the user.
 
 #### Hardware fauls
 
-- Hard disks crash, RAM becomes faulty, the power grid has a blackout, someone unplugs the wrong network cable. Anyone who has worked with __large data centers__ can tell you that these things happen __all the time__ when you have a lot of machines.
-- Hard disks are reported as having a __mean time to failure (MTTF)__ of about 10 to 50 years. Thus, on a storage cluster with 10,000 disks, we should expect on average __one disk to die per day__ :smiley:
-- There is a move towards systems that can tolerate the __loss of entire machines__, by using software fault-tolerance techniques in preference to hardware redundancy. Such systems also have operational advantages: 
-    - A single-server system requires planned downtime if you need to reboot the machine (to apply security patches, for example).
-    - Whereas a system that can tolerate machine failure can be patched one node at a time, without downtime of the entire system.
+- Hard disks crash, RAM becomes faulty, the power grid has a blackout, someone unplugs the wrong network cable. Anyone who has worked with **large data centers** can tell you that these things happen **all the time** when you have a lot of machines.
+- Hard disks are reported as having a **mean time to failure (MTTF)** of about 10 to 50 years. Thus, on a storage cluster with 10,000 disks, we should expect on average **one disk to die per day** :smiley:
+- There is a move towards systems that can tolerate the **loss of entire machines**, by using software fault-tolerance techniques in preference to hardware redundancy. Such systems also have operational advantages:
+  - A single-server system requires planned downtime if you need to reboot the machine (to apply security patches, for example).
+  - Whereas a system that can tolerate machine failure can be patched one node at a time, without downtime of the entire system.
 
 #### Software errors
 
-- Harder to anticipate because they are correlated across nodes, they tend to cause many more system failures than uncorrelated hardware faults. Examples include:
-    - A software bug that causes every instance of an application server to crash when given a particular bad
-input. For example, consider the leap second on _June 30, 2012_ that caused many applications to hang simultaneously, due to a __bug in the Linux kernel__.
-    - A runaway process uses up some shared resource—CPU time, memory, disk space or network bandwidth.
-    - A service that the system depends on slows down, becomes unresponsive or starts returning corrupted responses.
-    - Cascading failures, where a small fault in one component triggers a fault in another component, which in turn triggers further faults.
+- Harder to anticipate because they are correlated across nodes, they tend to cause many more system failures than uncorrelated hardware faults. Examples include: - A software bug that causes every instance of an application server to crash when given a particular bad
+  input. For example, consider the leap second on _June 30, 2012_ that caused many applications to hang simultaneously, due to a **bug in the Linux kernel**. - A runaway process uses up some shared resource—CPU time, memory, disk space or network bandwidth. - A service that the system depends on slows down, becomes unresponsive or starts returning corrupted responses. - Cascading failures, where a small fault in one component triggers a fault in another component, which in turn triggers further faults.
 
 ### Human errors
 
 - How do we make our system reliable, in spite of unreliable humans?:
-    - Design systems in a way that __minimizes opportunities for error__. For example, __well-designed abstractions, APIs and admin interfaces__ make it easy to do “the right thing”, and discourage “the wrong thing”.
-    - Provide fully-featured __non-production__ sandbox environments where people can explore and experiment safely, using real data, without affecting real users.
-    - Test thoroughly at all levels, from __unit tests__ to whole-system __integration tests__ and __manual tests__.
-    - Allow quick and easy recovery from human errors, to minimize the impact in the case of a failure. For example, make it __fast to roll back__ configuration changes, __roll out new code gradually__ (so that any unexpected bugs affect only a small subset of users), and provide tools to recompute data (in case it turns out that the old computation was incorrect).
-    - Set up __detailed and clear monitoring and telemetry__, such as performance metrics and error rates.
-- How important is reliability? Bugs in business applications cause __lost productivity__ (and legal risks if figures are reported incorrectly), and outages of e-commerce sites can have __huge costs__ in terms of lost revenue and reputation.
+  - Design systems in a way that **minimizes opportunities for error**. For example, **well-designed abstractions, APIs and admin interfaces** make it easy to do “the right thing”, and discourage “the wrong thing”.
+  - Provide fully-featured **non-production** sandbox environments where people can explore and experiment safely, using real data, without affecting real users.
+  - Test thoroughly at all levels, from **unit tests** to whole-system **integration tests** and **manual tests**.
+  - Allow quick and easy recovery from human errors, to minimize the impact in the case of a failure. For example, make it **fast to roll back** configuration changes, **roll out new code gradually** (so that any unexpected bugs affect only a small subset of users), and provide tools to recompute data (in case it turns out that the old computation was incorrect).
+  - Set up **detailed and clear monitoring and telemetry**, such as performance metrics and error rates.
+- How important is reliability? Bugs in business applications cause **lost productivity** (and legal risks if figures are reported incorrectly), and outages of e-commerce sites can have **huge costs** in terms of lost revenue and reputation.
 
 ### Scalability
 
-- Scalability is the term we use to describe a system’s ability to __adapt to increased load__.
+- Scalability is the term we use to describe a system’s ability to **adapt to increased load**.
 
 #### Describing load
 
-- Load can be described with a few numbers which we call __load parameters__.  Examples:
-    - it’s requests per second;
-    - ratio of reads to write;
-    - the number of simultaneously active users;
-    - number of messages in the queue ...
+- Load can be described with a few numbers which we call **load parameters**. Examples:
+  - it’s requests per second;
+  - ratio of reads to write;
+  - the number of simultaneously active users;
+  - number of messages in the queue ...
 
 #### Describing performance
 
-- In a batch-processing system such as _Hadoop_, we usually care about __throughput__: the number of records we can process per second, or the total time it takes to run a job on a dataset of a certain size.
-- In online systems, __latency__ is usually more important—the time it takes to serve a request, also known as _response time_.
--  In practice, in a system handling a variety of requests, the latency per request can __vary a lot__. We therefore need to think of latency not as a __single number__, but as a __probability distribution__.
+- In a batch-processing system such as _Hadoop_, we usually care about **throughput**: the number of records we can process per second, or the total time it takes to run a job on a dataset of a certain size.
+- In online systems, **latency** is usually more important—the time it takes to serve a request, also known as _response time_.
+- In practice, in a system handling a variety of requests, the latency per request can **vary a lot**. We therefore need to think of latency not as a **single number**, but as a **probability distribution**.
 - Even in a scenario where you’d think all requests should take the same time, you get variation: random additional latency could be introduced by:
-    - a context switch to a background process;
-    - the loss of a network packet and TCP retransmission;
-    - a garbage collection pause, a page fault forcing a read from disk, or many other things.
-- It’s common to see the __average__ response time of a service reported (arithmetic mean).
-- However, the mean is not a very good metric if you want to know your “typical” response time, because it is easily __biased by outliers__.
-- Usually it is better to use __percentiles__. If you take your list of response times and sort it, from fastest to slowest, then the median is the half-way point: for example, if your median response time is 200 ms, that means half your requests return in less than 200 ms, and half your requests take longer than that.
-- This makes the median a __good metric__ if you want to know how long users typically have to wait. The median is also known as __50th percentile__, and sometimes abbreviated as __p50__.
-    <p align="center"><img src="assets/response-time.png" width="500px" height="auto"></p>
+  - a context switch to a background process;
+  - the loss of a network packet and TCP retransmission;
+  - a garbage collection pause, a page fault forcing a read from disk, or many other things.
+- It’s common to see the **average** response time of a service reported (arithmetic mean).
+- However, the mean is not a very good metric if you want to know your “typical” response time, because it is easily **biased by outliers**.
+- Usually it is better to use **percentiles**. If you take your list of response times and sort it, from fastest to slowest, then the median is the half-way point: for example, if your median response time is 200 ms, that means half your requests return in less than 200 ms, and half your requests take longer than that.
+- This makes the median a **good metric** if you want to know how long users typically have to wait. The median is also known as **50th percentile**, and sometimes abbreviated as **p50**.
+    <p align="center"><img src="assets/response-time.png"></p>
 
 #### Approaches for coping with load
 
 - good architectures usually involve a pragmatic mixture of approaches (vertical scaling and horizental scaling).
-- there is no such a thing as __magic scaling sauce__. The problem may be:
-    - the volume of reads, the volume of writes, the volume of data to store;
-    - the complexity of the data, the latency requirements, the access patterns;
-    - or (usually) some mixture of all of these plus many more issues.
-- In an __early-stage startup__ or an unproven product it’s usually more important to be able to __iterate quickly__ on product features, than it is to scale to some __hypothetical future load__.
+- there is no such a thing as **magic scaling sauce**. The problem may be:
+  - the volume of reads, the volume of writes, the volume of data to store;
+  - the complexity of the data, the latency requirements, the access patterns;
+  - or (usually) some mixture of all of these plus many more issues.
+- In an **early-stage startup** or an unproven product it’s usually more important to be able to **iterate quickly** on product features, than it is to scale to some **hypothetical future load**.
 
 ### Maintainability
 
 - It is well-known that the majority of the cost of software is not in its initial development, but in its ongoing maintenance.
 - We will pay particular attention to three design principles for software systems:
-    - __Operability__: Make it easy for operations teams to keep the system running smoothly
-    - __Simplicity__: Make it easy for new engineers to understand the system, by removing as much complexity as possible from the system. 
-    - __Plasticity__: Make it easy for engineers in future to make changes to the system, adapting it for unanticipated use cases as requirements change.  Also known as extensibility, modifiability or malleability.
+  - **Operability**: Make it easy for operations teams to keep the system running smoothly
+  - **Simplicity**: Make it easy for new engineers to understand the system, by removing as much complexity as possible from the system.
+  - **Plasticity**: Make it easy for engineers in future to make changes to the system, adapting it for unanticipated use cases as requirements change. Also known as extensibility, modifiability or malleability.
 
 #### Operability: making life easy for operations
 
@@ -111,15 +106,13 @@ input. For example, consider the leap second on _June 30, 2012_ that caused many
 
 ### Simplicity: managing complexity
 
-- Moseley and Marks  define complexity as _accidental_ if it is not inherent in the problem that the software solves (as seen by the users), but arises only from the implementation.
-- One of the best tools we have for removing accidental complexity is __abstraction__. A good abstraction can hide a great deal of implementation detail behind a clean, simple-to-understand
-façade.
-    - high-level programming languages are abstractions that hide machine code, CPU registers and syscalls.
-    - SQL is an abstraction that hides complex on-disk and in-memory data structures, concurrent requests from other clients, and inconsistencies after crashes.
+- Moseley and Marks define complexity as _accidental_ if it is not inherent in the problem that the software solves (as seen by the users), but arises only from the implementation.
+- One of the best tools we have for removing accidental complexity is **abstraction**. A good abstraction can hide a great deal of implementation detail behind a clean, simple-to-understand
+  façade. - high-level programming languages are abstractions that hide machine code, CPU registers and syscalls. - SQL is an abstraction that hides complex on-disk and in-memory data structures, concurrent requests from other clients, and inconsistencies after crashes.
 
 ### Plasticity: making change easy
 
-- In terms of organizational processes, _agile_ working patterns provide a framework for adapting to change. The agile community has also developed technical tools and patterns that are helpful when developing software in a frequently-changing environment, such as __test-driven development (TDD)__ and __refactoring__.
+- In terms of organizational processes, _agile_ working patterns provide a framework for adapting to change. The agile community has also developed technical tools and patterns that are helpful when developing software in a frequently-changing environment, such as **test-driven development (TDD)** and **refactoring**.
 
 ## Chapter 2. The Battle of the Data Models
 
@@ -129,4 +122,135 @@ façade.
 ### Rivals of the Relational Model
 
 - The best-known data model today is probably that of _SQL_, based on the relational model proposed by _Edgar Codd_ in 1970.
-- data is organized into __relations__ (in SQL: tables), where each relation is an unordered collection of __tuples__ (rows).
+- Data is organized into **relations** (in SQL: tables), where each relation is an unordered collection of **tuples** (rows).
+- The goal of the relational model was to **hide the implementation detail** behind a cleaner interface.
+- There are several driving forces behind the adoption of _NoSQL_ databases, including:
+  - A need for **greater scalability** than relational databases can easily achieve, including very large datasets or very high write throughput;
+  - **Specialized query operations** that are not well supported by the relational model;
+  - Frustration with the restrictiveness of relational schemas, and a desire for a **more dynamic and expressive** data model.
+
+### The object-relational mismatch
+
+- Most application development today is done in OOP languages, which leads to a common criticism of the SQL data model:
+  - if data is stored in relational tables, an **awkward translation layer** is required between the objects in the application code and the database model of tables, rows and columns.
+  - The disconnect between the models is sometimes called an _impedance mismatch_.
+- The JSON representation also has better _locality_: in the relational model, if you want to fetch a profile, you need to either perform **multiple queries** (query each table by `user_id`) or perform a messy multi-way join between the users table and its subordinate tables.
+- In the JSON representation, all the relevant information is in once place, and one simple query is sufficient.
+
+### Many-to-one and many-to-many relationships
+
+- A database in which entities like region and industry are referred to by ID is called **normalized**, whereas a database that duplicates the names and properties of entities on each document is **denormalized**.
+- In document databases, joins are **not needed** for one-to-many tree structures, and support for joins is often **weak**.
+- The debate concerning how to best represent many to many relationships and joins is much older than NoSQL, it goes back to the very earliest computerised database systems. The most popular one was IBM’s _information Management System (IMS)_.
+- The design of IMS used a fairly simple data model called the **hierarchical model**, which has some remarkable similarities to the JSON model used by document databases.
+- Like document databases, IMS worked well for one-to-many relationships, but it made many-to-many relationships difficult and it didn’t support joins.
+- Various solutions were proposed to solve the limitations of the hierarchical model. The two most prominent were the **relational** model (which became SQL, and took over the world), and the **network model** (which initially had a large following but eventually faded into obscurity).
+
+### The network model
+
+- also known as the _CODASYL_ model. The CODASYL model is a generalization of the hierarchical model.
+- In the tree structure of the hierarchical model, every record has exactly one parent; in the network model, a record can have multiple parents.
+- The links between records in the network model are not foreign keys, but more like **pointers** in a programming language (while still being stored on disk). The only way of accessing a record was to follow a path from a root record along these chains of links (Like traversing a linked list). This was called an **access path**.
+- With both the hierarchical and the network model, if you didn’t have a path to the data you wanted, you were in a **difficult** situation. You could change the access paths, but then you had to go through a lot of **hand-written** database query code and rewrite it to handle the new access paths. It was difficult to make changes to an application’s data model.
+
+### The relational model
+
+- What the relational model did, by contrast, was to lay out all the data in the open: a relation (table) is simply a collection of tuples (rows), and that’s it.
+- There are no labyrinthine nested structures, no **complicated access paths** to follow if you want to look at the data. You can read any or all of the rows in a table, selecting those that match an arbitrary condition.
+- The **query optimizer automatically** decides which parts of the query to execute in which order, and which indexes to use.
+  Query optimizers for relational databases are complicated beasts, and they have consumed many years of research and development effort.
+
+### Relational vs. document databases today
+
+- The main arguments in favor of the document data model are: simpler application code, schema flexibility, and better performance due to locality.
+- If your application does use many-to-many relationships, the document model becomes **less appealing**. It’s possible to reduce the need for joins by **denormalizing**, but then the application code needs to do additional work to keep the denormalized data consistent. Joins can be emulated in application code by making multiple requests to the database, but that also moves complexity into the application.
+- Schema changes have a **bad reputation** of being **slow and requiring downtime**.
+- If your application often needs to access the entire document (for example, to render it on a web page), there is a performance advantage to this storage **locality**. If data is split across multiple tables, multiple index lookups are required to retrieve it all, which may require **more disk seeks** and take more time.
+- The locality advantage only applies if you need large parts of the document at the same time. The database typically needs to load the entire document, even if you access only a **small portion** of it, which can be **wasteful** on large documents. On updates to a document, the entire document usually needs to be re-written—only modifications that don’t change the encoded size of a document can easily be performed in-place. For these reasons, it is generally recommended that you keep documents fairly **small**.
+- It seems that relational and document databases are becoming more similar over time (JSON support in PostgreSQL), MongoDB drivers automatically resolve database references (effectively performing a client-side join) .
+
+### Query languages for data
+
+- When the relational model was introduced, it included a new way of querying data: it used a **declarative** query language, whereas IMS and CODASYL queried the database using **imperative** code. What does that mean?
+- An imperative language tells the computer to perform certain operations in a **certain order**. You can imagine stepping through the code, line by line, evaluating conditions, updating variables, and deciding whether to go around the loop one more time.
+- Declarative querying means that you just specify the pattern of the data you want—what conditions the results must meet, and how you want it to be transformed (e.g. sorted, grouped and aggregated), but not how to achieve that goal. It is up to the database system’s query optimizer to decide which indexes and which join methods to use, and in which order to execute various parts of the query.
+- A declarative query language is attractive because it is typically more **concise and easier** to work with than an imperative API. But more importantly, it also **hides implementation details** of the database engine, which makes it possible for the database system to introduce performance improvements without requiring any changes to queries.
+- The fact that SQL is more limited in functionality gives the database much more room for automatic optimizations.
+- Imperative code is very **hard to parallelize** across multiple cores and multiple machines, but declarative languages have a chance of getting faster.
+- In a web browser, declarative CSS styling is much better than manipulating styles imperatively in JavaScript. Similarly, in databases, declarative query languages like SQL turned out to be much better than imperative query APIs
+
+### MapReduce querying
+
+- _MapReduce_ is a programming model for processing large amounts of data in bulk across many machines, popularized by Google.
+- It is based on the _map_ (also known as collect) and _reduce_ (also known as fold or inject) functions that exist in many functional programming languages.
+- The MapReduce model is best explained by example. Imagine you are a marine biologist, and you add an observation record to your database every time you see animals in the ocean. Now you want to generate a report saying how many sharks have been sighted per month.
+
+```sql
+SELECT date_trunc('month', observation_timestamp) AS observation_month,
+  sum(num_animals) AS total_animals
+FROM observations
+WHERE family = 'Lamniformes'
+GROUP BY observation_month;
+```
+
+- The same can be expressed with MongoDB’s MapReduce feature as follows:
+
+```js
+db.observations.mapReduce(
+  function map() {
+    var year = this.observationTimestamp.getFullYear();
+    var month = this.observationTimestamp.getMonth() + 1;
+    emit(year + "-" + month, this.numAnimals);
+  },
+
+  function reduce(key, values) {
+    return Array.sum(values);
+  },
+  {
+    query: {
+      family: "Lamniformes",
+    },
+    out: "monthlySharkReport",
+  }
+);
+```
+
+- The map function emits a key (a string consisting of year and month, such as "2013-12" or "2014-1") and a value (the number of animals in that observation).
+- The key-value pairs emitted by map are grouped by key. For all key-value pairs with the same key (i.e. the same month and year), the reduce function is called once.
+- The reduce function adds up the number of animals from all observations in a particular month.
+
+```js
+{
+    observationTimestamp: Date.parse("Mon, 25 Dec 1995 12:34:56 GMT"), family: "Lamniformes",
+    species: "Carcharodon carcharias",
+    numAnimals: 3
+} ,
+{
+    observationTimestamp: Date.parse("Tue, 12 Dec 1995 16:17:18 GMT"), family: "Lamniformes",
+    species: "Carcharias taurus",
+    numAnimals: 4
+}
+```
+
+- The map function would called **once for each document**, resulting in emit("1995-12", 3) and emit("1995-12", 4). Subsequently, the reduce function would be called with reduce("1995-12", [3, 4]), returning 7.
+- The map and reduce function are somewhat **restricted** in what they are allowed to do. They must be **pure functions**, which means: they only use the data that is passed to them as input, they cannot perform additional database queries and they must not have any side-effects. They are nevertheless powerful: they can parse strings, call library functions, perform calculations and more.
+- Being able to use JavaScript code in the middle of a query is a great feature for advanced queries, and it’s not limited to MapReduce—SQL databases can be extended with JavaScript functions too. This means that MongoDB’s MapReduce and SQL are roughly equivalent in terms of the kinds of queries you can express.
+- The difference is that with MapReduce, you have to write two carefully coordinated JavaScript functions, even for simple queries. This makes it **harder to use than SQL**, without significant advantages. So why was MapReduce chosen in the first place? Probably because it is easier to implement than a declarative query language, and perhaps because the term MapReduce sounds like high scalability, due to its association with Google :anguished:
+- The MongoDB team realized this too, and added a declarative query language called aggregation pipeline to MongoDB 2.2. The kinds of queries you can write with it are very similar to SQL. Because it is declarative, it is able to perform automatic optimizations that are not possible with MapReduce. The same query looks like this:
+
+```js
+db.observations.aggregate([
+  { $match: { family: "Lamniformes" } },
+  {
+    $group: {
+      _id: {
+        year: { $year: "$observationTimestamp" },
+        month: { $month: "$observationTimestamp" },
+      },
+      totalAnimals: { $sum: "$numAnimals" },
+    },
+  },
+]);
+```
+
+- SQL is often criticized for its cumbersome syntax, but it’s debatable whether this is any better.
