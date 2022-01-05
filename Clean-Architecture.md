@@ -188,7 +188,7 @@ char* getName(struct NamedPoint* np) {
 int main(int ac, char** av) {
     struct NamedPoint* origin = makeNamedPoint(0.0, 0.0, "origin");
     struct NamedPoint* upperRight = makeNamedPoint(1.0, 1.0, "upperRight");
-    printf("distance=%f\n", distance( 
+    printf("distance=%f\n", distance(
         (struct Point*) origin, (struct Point*) upperRight));
 }
 ```
@@ -246,7 +246,7 @@ int getchar() {
 - In other words, `getchar()` simply calls the function pointed to by the read pointer of the `FILE` data structure pointed to by `STDIN`.
 - This simple trick is the basis for all polymorphism in OO. In C++, for example, every __virtual function__ within a class has a pointer in a table called a _vtable_, and all calls to virtual functions go through that table. Constructors of derivatives simply load their versions of those functions into the vtable of the object being created.
 - The bottom line is that polymorphism is an __application of pointers to functions__.
-- Programmers have been using pointers to functions to achieve polymorphic behavior since _Von Neumann_ architectures were first implemented in the late 1940s. 
+- Programmers have been using pointers to functions to achieve polymorphic behavior since _Von Neumann_ architectures were first implemented in the late 1940s.
 - In other words, OO has provided nothing new. Ah, but that’s not quite correct. OO languages may not have given us polymorphism, but they have made it __much safer and much more convenient__.
 - OO is the ability, through the use of polymorphism, to gain __absolute control__ over every __source code dependency__ in the system. It allows the architect to create a __plugin__ architecture, in which modules that contain __high-level policies__ are __independent__ of modules that contain __low-level details__. The low-level details are relegated to plugin modules that can be deployed and developed independently from the modules that contain __high-level policies__.
 
@@ -288,11 +288,11 @@ separate the code that different actors depend on.
 - The essential insight here is that generating the report involves __two separate responsibilities__:
     - the calculation of the reported data;
     - and the presentation of that data into a web and printer-friendly form. <p align="center"><img src="assets/ocp.png"></p>
-- Classes marked with `<I>` are __interfaces__; those marked with `<DS>` are __data structures__. 
+- Classes marked with `<I>` are __interfaces__; those marked with `<DS>` are __data structures__.
 - Open arrowheads are using __relationships__. Closed arrowheads are implements or __inheritance__ relationships.
 - An arrow pointing from class `A` to class `B` means that the source code of class `A` mentions the name of class `B`, but class `B` mentions __nothing about__ class `A`. Thus, `FinancialDataMapper` knows about `FinancialDataGateway` through an implements relationship, but `FinancialGateway` knows nothing at all about `FinancialDataMapper`.
 - The next thing to notice is that each double line is crossed in __one direction only__. This means that all component relationships are __unidirectional__. These arrows point toward the components that we want to __protect from change__. <p align="center"><img src="assets/components-relationships-uni.png"></p>
-- We want to protect the _Controller_ from changes in the _Presenters_. We want to protect the _Presenters_ from changes in the _Views_. We want to protect the _Interactor_ from changes in—well, anything. 
+- We want to protect the _Controller_ from changes in the _Presenters_. We want to protect the _Presenters_ from changes in the _Views_. We want to protect the _Interactor_ from changes in—well, anything.
 - The _Interactor_ is in the position that best conforms to the OCP. Changes to the Database, or the Controller, or the Presenters, or the Views, will have __no impact__ on the Interactor. Why should the _Interactor_ hold such a privileged position? Because it contains the __business rules__. The Interactor contains the __highest-level policies__ of the application. All the other components are dealing with peripheral concerns. The _Interactor_ deals with the __central concern__.
 - This is how the OCP works at the architectural level. Architects separate functionality based on how, why, and when it changes, and then organize that separated functionality into a hierarchy of components. __Higher-level__ components in that hierarchy are __protected__ from the changes made to __lower-level__ components.
 
@@ -330,3 +330,29 @@ the primary reason that dynamically typed languages create systems that are __mo
 ### Chapter 11 DIP: Dependency Inversion Principle
 
 - The Dependency Inversion Principle (DIP) tells us that the most flexible systems are those in which source code dependencies refer only to __abstractions, not to concretions__.
+- In a statically typed language, like Java, this means that the `use, import,` and `include` statements should __refer only to source modules containing interfaces, abstract classes__, or some kind of abstract declaration.
+- The same rule apply for dynamically typed languages, like Ruby and Python. __Source code dependencies should not refer to concrete modules__. However, in these languages it is a bit harder to define what a concrete module is, in particular, it is any module which the functions being called are implemented.
+- Clearly treating this idea as a rule is unrealistic, because software systems must depend on many concrete facilities.
+    - We tend to ignore the __stable background of operating system__ and platform facilities because we know we can rely on them to not change.
+    - Example: `String` class in Java is __very stable__.
+- Is the the __volatile concrete__ elements of our system that we want to __avoid depending on__. Those are the modules that are actively developing, and that are undergoing frequent change.
+
+#### Stable Abstractions
+
+- Every change to an abstract interface corresponds to a change to its concrete implementations. Conversely, changes to concrete implementations do not always, or even usually, require changes to the interface that they implement
+    - :arrow_forward: Therefore interfaces are less volatile than implementations.
+    - A good software architect work hard to __reduce the volatility of interfaces__ (stable abstract interfaces).
+    - Coding practices:
+        - :white_check_mark: Don’t refer to volatile concrete classes.
+        - :white_check_mark: Don’t derive doom volatile concrete classes.
+        - :white_check_mark: Don’t override concrete functions.
+
+#### Factories
+
+- To comply with these rules, the creation of volatile concrete objects requires special handling. In most object-oriented languages, such a Java, we would use an *Abstract Factory* to manage this undesirable factory.
+- The diagram below shows the structure:
+    - The `Application` uses the `ConcreteImpl` though the `Service` interface.
+    - However the `Application` must somehow create instances of the `ConcreteImpl`. To achieve this without creating a source code dependency on the `ConcreteImpl`, the `Application` cals the `makeSvc` method of the `ServiceFactory` interface. This method is implemented by the `ServiceFactoryImpl` class, which derives from `ServiceFactory`. The implementation instantiates the `ConcreteImpl` and returns it as a `Service`.
+    - The curved line is an architectural boundary, it separates the abstract from the concrete.
+    <p align="center"><img src="assets/factories.png" width="400px" height="auto"></p>
+- The way the dependencies cross that curved line in one direction, and toward more abstract entities, will become a new rule that we will call the **Dependency Rule**.
