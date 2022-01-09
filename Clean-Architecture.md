@@ -356,3 +356,23 @@ the primary reason that dynamically typed languages create systems that are __mo
     - The curved line is an architectural boundary, it separates the abstract from the concrete.
     <p align="center"><img src="assets/factories.png" width="400px" height="auto"></p>
 - The way the dependencies cross that curved line in one direction, and toward more abstract entities, will become a new rule that we will call the **Dependency Rule**.
+
+### Chapter 12 Components
+
+- Components are the __unit of deployment__. The smallest entities that can be deployed as part of a system.
+    - In Java, they are jar files. In Ruby, they are gem files. In .NET, they are DLLs.
+- In the early days of software development, programmers controllers the memory locations and layout of their programs
+    - *origin* statement tells the compiler to generate code that will be loaded at address 200.
+    - Libraries where kept in source, not in a binary.
+    - Devices were slow, memory was expensive and, therefore was limited.
+    - :arrow_forward: Compilation took a long time.
+    - To shorten compile times, the source code of the function library was separated from the apps.
+        - Programmers compiled the function library separately and loaded the binary at a known address.
+        - Memory layout looks like this: <p align="center"><img src="assets/memory-layout-old-days.png" width="400px" height="auto"></p>
+    - This works fine as long as the app could fit between addresses 0000 and 1777. But soon apps grow to be larger than the space allocated for them
+
+#### Relocatability
+
+- The compiler was changed to output binary code that could be relocated in memory by a smart loader.
+- The loader would be told where to load the relocatable code (`.reloc` in PE files :) ).
+- The relocatable code was instrumented with flags that told the loader which parts of the loaded data had to be altered to be loaded at the selected address.

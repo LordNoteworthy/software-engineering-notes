@@ -445,3 +445,14 @@ within_recursive(LivingLoc, LivingIn).
   - Since read requests need to scan over several key-value pairs in the requested range anyway, it is possible to **group those records into a block and compress it** before writing it to disk. Each entry of the sparse in-memory index then points at the start of a compressed block. Nowadays, **disk bandwidth is usually a worse bottleneck than CPU**, so it is worth spending a few additional CPU cycles to reduce the amount of data you need to write to and read from disk.
 - Maintaining a sorted structure on disk is possible, but maintaining it in memory is much easier. There are plenty of well-known tree data structures that you can use, such as _Red-Black trees_ or _AVL_ trees. With these data structures, you can insert keys in any order, and read them back in sorted order.
 - The basic idea—keeping a cascade of SSTables that are merged in the background—is simple and effective. Even when the dataset is much bigger than memory it continues to work well. Since data is stored in sorted order, you can efficiently perform range queries (scanning all keys above some minimum and up to some maximum). And because the disk writes are sequential, the LSM-tree can support remarkably __high write throughput__.
+
+### Multi-column indexes
+
+- The most common type of multi-column index is called a __concatenated index__, which simply combines several fields into one key by appending one column to another (the index definition specifies in which order the fields are concatenated).
+- Multi-dimensional indexes are a more general way of querying several columns at once, which is particularly important for __geospatial__ data:
+```sql
+SELECT * FROM restaurants
+WHERE latitude > 51.4946 AND latitude < 51.5079 AND longitude > -0.1162 AND longitude < -0.1004;
+```
+- A standard B-tree or LSM-tree index is not able to answer that kind of query efficiently: it can give you either all the restaurants in a range of latitudes (but at any longitude), or all the restaurants in a range of longitudes (but anywhere between north and south pole), but not both simultaneously.
+- One option is to translate a two-dimensional location into a single number using a space-filling curve, and then to use a regular B-tree index. More commonly, specialized spatial indexes such as R-trees are used. For example, PostGIS implements geospatial indexes as R-trees using PostgreSQL’s Generalized Search Tree indexing facility.
