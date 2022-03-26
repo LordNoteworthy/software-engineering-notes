@@ -66,7 +66,7 @@ only those kinds of control structures could be __recursively subdivided into pr
 that still support the `goto` keyword often restrict the target to within the __scope of the current function__.
 - Structured programming allows modules to be recursively decomposed into __provable units__, which in turn means that modules can be __functionally decomposed__.
 - That is, you can take a large-scale problem statement and decompose it into __highlevel functions__. Each of those functions can then be decomposed into __lower-level functions__, ad infinitum. Moreover, each of those decomposed functions can be represented using the restricted control structures of structured programming.
-- Dijkstra once said, _“Testing shows the presence, not the absence, of bugs.”_ 
+- Dijkstra once said, _“Testing shows the presence, not the absence, of bugs.”_
     - A program __can be proven incorrect__ by a test, but it __cannot be proven correct__.
     - All that tests can do, after sufficient testing effort, is allow us to deem a program to be correct enough for our purposes.
     - => Software development is not a mathematical endeavor, even though it seems to manipulate mathematical constructs.
@@ -79,7 +79,7 @@ that still support the `goto` keyword often restrict the target to within the __
     - Combination of data and function.
         - :arrow_forward: __absurd__, because programmers were passing data structures into functions long before 1966, when Dahl and Nygaard moved the function call stack frame to the heap and invented OO.
     - A way to model the real world.
-        - :arrow_forward: evasive answer at best. What does “modeling the real world” actually mean, and why is it something we would want to do? 
+        - :arrow_forward: evasive answer at best. What does “modeling the real world” actually mean, and why is it something we would want to do?
     - Proper admixture of these three things: __encapsulation__, __inheritance__, and __polymorphism__.
 
 ### Encapsulation?
@@ -374,5 +374,64 @@ the primary reason that dynamically typed languages create systems that are __mo
 #### Relocatability
 
 - The compiler was changed to output binary code that could be relocated in memory by a smart loader.
-- The loader would be told where to load the relocatable code (`.reloc` in PE files :) ).
+- The loader would be told where to load the relocatable code (`.reloc` in PE files :smile: ).
 - The relocatable code was instrumented with flags that told the loader which parts of the loaded data had to be altered to be loaded at the selected address.
+- The compiler was also changed to emit the names of the functions as metadata in the relocatable binary. If a program called a library function, the compiler would emit that name as an __external reference__. If a program defined a library function, the compiler would emit that name as an __external definition__. Then the loader could link the external references to the external definitions once it had determined where it had loaded those definitions.
+	- :cool: and the linking loader was born.
+
+#### Linkers
+
+The linking loader allowed programmers to divide their programs up onto __separately compilable and loadable segments__. This worked well when relatively small programs were being linked with relatively small libraries.
+- Eventually, the linking loaders were __too slow to tolerate__. They had to read dozens, if not hundreds, of binary libraries (stored on slow devices) to resolve the external references.
+- As a result, the loading and the linking were separated into two phases. Programmers took the slow part — the part that did that linking — and put it into a separate application called the linker. The output of the linker was a linked relocatable that a relocating loader could load very quickly.
+- Compiling each individual module was relatively fast, but compiling all the modules took a bit of time. The linker would then take even more time. Turnaround had gain grown to an hour or more in many cases.
+- It seemed as if programmers were doomed to endlessly chase their tail :hushed:.
+- By the mid-1990s, the time spent linking had begun to shrink faster than our
+ambitions could make programs grow (__thanks to Moore’s law__). In many cases, link time decreased to a matter of seconds.
+
+### Chapter 13: Component Cohesion
+
+#### The Reuse/Release Equivalence Principle
+
+- REP is a principle that seems obvious, at least in hindsight. People who want to reuse software components cannot, and will not, do so unless those components are __tracked through a release process__ and are given __release numbers__.
+
+#### The Common Closure Principle
+
+- Gather into components those classes that __change for the same reasons__ and at the __same times__. Separate into different components those classes that __change at different times__ and for __different reasons__.
+-This is the Single Responsibility Principle restated for __components__.
+
+#### The Common Reuse Principle
+
+- Don’t force users of a component to depend on things they don’t need.
+- When we depend on a component, we want to make sure we depend __on every class__ in that component. Put another way, we want to make sure that the classes that we put into a component are __inseparable__ — that it is impossible to depend on some and not on the others. Otherwise, we will be redeploying more components than is necessary, and wasting significant effort.
+- The CRP is the generic version of the ISP. The ISP advises us not to depend on classes that have __methods__ we don’t use. The CRP advises us not to depend on __components__ that have classes we don’t use.
+
+#### The Tension Diagram for Component Cohesion
+
+- The edges of the diagram describe the __cost of abandoning__ the principle on the opposite vertex.
+<p align="center"><img src="assets/cohesion-principles-tension.png" width="400px" height="auto"></p>
+
+### Chapter 14: Component Coupling
+
+#### The Acyclic Dependencies Principle
+
+- the _morning after syndrome_ occurs in development environments wheremany developers are modifying the same source files. Some code that used to work are now no longer working because someone modified something you depends on.
+- two solutions to this problem have evolved: __the weekly build__ and the __Acyclic Dependencies Principle (ADP)__.
+
+##### The Weekly Build
+
+- Used to be common in medium-sized projects.
+- All the developers ignore each other for the first four days of the week. Then, on Friday, they integrate all their changes and build the system.
+- :white_check_mark: allowing the developers to live in an isolated world for four days out of five.
+- :x: large integration penalty that is paid on Friday.
+- :arrow_forward: As the project size grows, integration and testing become increasingly harder to do.
+
+##### Eliminating Dependency Cycles
+
+- The solution to this problem is to __partition__ the development environment into __releasable components__.
+- To make it work successfully, however, you must manage the __dependency structure__ of the components. There can be no cycles. If there are cycles in the dependency structure, then the _morning after syndrome_ cannot be avoided.
+
+<p align="center"><img src="assets/typical-components-diagram.png" width="400px" height="auto"></p>
+
+- Regardless of which component you begin at, it is impossible to follow the dependency relationships and wind up back at that component. This structure has no cycles. It is a __directed acyclic graph (DAG)__.
+- When it is time to release the whole system, the process proceeds from the bottom up. First the `Entities` component is compiled, tested, and released. Then the same is done for `Database` and `Interactors`. These components are followed by `Presenters`, `View,` `Controllers`, and then `Authorizer`. `Main` goes last. This process is very clear and easy to deal with. We know how to build the system because we understand the dependencies between its parts.
