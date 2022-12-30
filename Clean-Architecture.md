@@ -19,7 +19,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - don't need a massive requirements doc and huge issue tracking systems.
     - require a fraction of human resources to maintain, efforts are minimized, functionality and flexibility are maximized.
 
-## 1. What is design and architecture
+## Chapter 1. What is design and architecture
 
 - the word __architecture__ is often used in the context of something at a _high level_ that is divorced from the low-level details, whereas __design__ more often seems to imply structures and decisions at a _low level_.
 - the low-level details and the high-level structure are all part of the same whole, they form a continuous fabric that defines the shape of the system. You can't have one without the other; indeed __no clear deviding__ lines separates them.
@@ -30,7 +30,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
 - a fact is that making messes is _always_ slower then staying clean, no matter which time scale you are using.
 - developers may think that the answer is to start over __from scratch__ and redesign the whole system but that could be another mistake due to their __overconfidence__.
 
-## 2. A tale of two values
+## Chapter 2. A tale of two values
 
 - every software system provides two different values to the stakeholders:.
     - __behavior__ or __function__: program should work and behave in a way that makes or saves money for the stakeholders.
@@ -39,7 +39,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
 - Business managers and developers fail to separate those features that __urgent__ but __not important__, from those features that truly are __urgent and important__. This failure leads to ignoring the important architecture of the system in favor of the unimportant features of the system.
 - If __architecture__ comes last, then the system will become ever __more costly__ to develop, and eventually __change__ wil become practically impossible for part or for all of the system. If that is allowed to happen, it means the software development team did not fight hard enough for what they knew was necessery.
 
-## 3. Paradigm overview
+## Chapter 3. Paradigm overview
 
 - __structured programming__:
     - shows that the use of __unrestrained__ jumps (`goto` statements) is __harmful__ to program structure.
@@ -56,7 +56,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - _Functional programming imposes discipline upon assignment_.
 - each of these paradigms __removes__ capabilities from the programmer, none of them adds new ones. Each imposes some kind of extra discipline that is negative in its intent. The paradigms tell us __what not to do__, more than they tell us __what to do__. They removed `goto` statements, function pointers, and assignement.
 
-## 4. Structured Programming
+## Chapter 4. Structured Programming
 
 -  _Dijkstra_ discovered that certain uses of `goto` statements prevent modules from being __decomposed recursively__ into smaller and smaller units, thereby preventing use of the __divide-and-conquer__ approach necessary for reasonable proofs.
 - Other uses of `goto`, however, did not have this problem. Dijkstra realized that these “good” uses of goto corresponded to simple __selection__ and __iteration__ control structures such as `if/then/else` and `do/while`. Modules that used
@@ -73,7 +73,7 @@ that still support the `goto` keyword often restrict the target to within the __
     - => Rather, __software is like a science__. We show correctness by failing to prove incorrectness, despite our best efforts.
 - Structured programming forces us to recursively decompose a program into a set of small provable functions. We can then use tests to try to prove those small provable functions incorrect. If such tests fail to prove incorrectness, then we deem the functions to be correct enough for our purposes.
 
-## 5. Object-Oriented Programming
+## Chapter 5. Object-Oriented Programming
 
 -  What is OO?
     - Combination of data and function.
@@ -208,7 +208,7 @@ void copy() {
         putchar(c);
 }
 ```
-- The function `getchar()` reads from `STDIN`. But which device is STDIN? 
+- The function `getchar()` reads from `STDIN`. But which device is STDIN?
 - The `putchar()` function writes to `STDOUT`. But which device is that?
 - These functions are polymorphic—their behavior depends on the type of `STDIN` and `STDOUT`.
 - So how does the call to `getchar()` actually get delivered to the device driver that reads the character?
@@ -262,7 +262,7 @@ int getchar() {
         - The more memory we have, and the faster our machines are, the less we need mutable state.
         - If we have enough storage and enough processor power, we can make our applications entirely immutable—and, therefore, entirely functional.
 
-### Chapter 7 SRP: The Single Responsibility Principle
+## Chapter 7 SRP: The Single Responsibility Principle
 
 - :eyes: does not mean that every module should do just one thing.
 - But means instead that _a module should be responsible to one, and only one, actor_.
@@ -274,12 +274,12 @@ int getchar() {
 - Many problems occur because we put code that __different actors__ depend on into __close proximity__. The SRP says to
 separate the code that different actors depend on.
 
-### Chapter 8 OCP: The Open-Closed Principle
+## Chapter 8 OCP: The Open-Closed Principle
 
 - The Open-Closed Principle (OCP) was coined in 1988 by _Bertrand Meyer_. It says: _A software artifact should be open for extension but closed for modification_.
 - In other words, the behavior of a software artifact ought to be extendible, without having to modify that artifact.
 
-#### A Thought Experiment
+### A Thought Experiment
 
 - Imagine, for a moment, that we have a system that displays a financial summary on a web page. The data on the page is scrollable, and negative numbers are rendered in red.
 - Now imagine that the stakeholders ask that this same information be turned into a report to be printed on a black-and-white printer. The report should be properly paginated, with appropriate page headers, page footers, and column labels. Negative numbers should be surrounded by parentheses.
@@ -296,7 +296,7 @@ separate the code that different actors depend on.
 - The _Interactor_ is in the position that best conforms to the OCP. Changes to the Database, or the Controller, or the Presenters, or the Views, will have __no impact__ on the Interactor. Why should the _Interactor_ hold such a privileged position? Because it contains the __business rules__. The Interactor contains the __highest-level policies__ of the application. All the other components are dealing with peripheral concerns. The _Interactor_ deals with the __central concern__.
 - This is how the OCP works at the architectural level. Architects separate functionality based on how, why, and when it changes, and then organize that separated functionality into a hierarchy of components. __Higher-level__ components in that hierarchy are __protected__ from the changes made to __lower-level__ components.
 
-### Chapter 9 LSP: The Liskov Substitution Principle
+## Chapter 9 LSP: The Liskov Substitution Principle
 
 - In 1988, Barbara Liskov wrote the following as a way of defining subtypes:
     - :bulb: _What is wanted here is something like the following substitution property: If for each object o1 of type S there is an object o2 of type T such that for all programs P defined in terms of T, the behavior of P is unchanged when o1 is substituted for o2 then S is a subtype of T_.
@@ -306,14 +306,14 @@ separate the code that different actors depend on.
 - In this example, `Square` is not a proper __subtype__ of `Rectangle` because the height and width of the `Rectangle` are __independently mutable__; in contrast, the height and width of the `Square` must __change together__. Since the `User` believes it is communicating with a `Rectangle`, it could easily get confused.
 - :arrow_forward: A simple violation of __substitutability__, can cause a system’s architecture to be polluted with a significant amount of extra mechanisms.
 
-### Chapter 10 ISP: The Interface Segregation Principle
+## Chapter 10 ISP: The Interface Segregation Principle
 
 - The Interface Segregation Principle (ISP) derives its name from the diagram below: <p align="center"><img src="assets/isp.png"></p>
 - In the situation illustrated in above, there are several users who use the operations of the `OPS` class. Let’s assume that `User1` uses only `op1`, `User2` uses only `op2`, and `User3` uses only `op3`.
 - Now imagine that `OPS` is a class written in a language like Java. Clearly, in that case, the source code of `User1` will __inadvertently depend__ on `op2` and `op3`, even though it doesn’t call them. This dependence means that a change to the source code of `op2` in `OPS` will force `User1` to be __recompiled and redeployed__, even though nothing that it cared about has actually changed.
 - This problem can be resolved by __segregating the operations into interfaces__: <p align="center"><img src="assets/isp-segregated-ops.png"></p>
 
-#### ISP and Language
+### ISP and Language
 
 - Clearly, the previously given description depends critically on language type. __Statically typed languages__ like Java force programmers to create declarations that users must `import`, or use, or otherwise `include`. It is these included
 declarations in source code that create the source code dependencies that __force recompilation and redeployment__.
@@ -321,13 +321,13 @@ declarations in source code that create the source code dependencies that __forc
 the primary reason that dynamically typed languages create systems that are __more flexible and less tightly coupled__ than statically typed languages.
 - :arrow_forward: This fact could lead you to conclude that the ISP is a language issue, rather than an architecture issue.
 
-#### ISP and Architecture
+### ISP and Architecture
 
 - In general, it is __harmful__ to depend on modules that contain __more than you need__. This is obviously true for source code dependencies that can force unnecessary recompilation and redeployment—but it is also true at a much higher, __architectural level__.
 - Consider, for example, an architect working on a system, S. He wants to include a certain framework, F, into the system. Now suppose that the authors of F have bound it to a particular database, D. So S depends on F. which depends on D. <p align="center"><img src="assets/isp-problematic-architecture.png"></p>.
 -  Now suppose that D contains features that F does not use and, therefore, that S does not care about. Changes to those features within D may well force the redeployment of F and, therefore, the redeployment of S. Even worse, a failure of one of the features within D may cause failures in F and S.
 
-### Chapter 11 DIP: Dependency Inversion Principle
+## Chapter 11 DIP: Dependency Inversion Principle
 
 - The Dependency Inversion Principle (DIP) tells us that the most flexible systems are those in which source code dependencies refer only to __abstractions, not to concretions__.
 - In a statically typed language, like Java, this means that the `use, import,` and `include` statements should __refer only to source modules containing interfaces, abstract classes__, or some kind of abstract declaration.
@@ -337,7 +337,7 @@ the primary reason that dynamically typed languages create systems that are __mo
     - Example: `String` class in Java is __very stable__.
 - Is the the __volatile concrete__ elements of our system that we want to __avoid depending on__. Those are the modules that are actively developing, and that are undergoing frequent change.
 
-#### Stable Abstractions
+### Stable Abstractions
 
 - Every change to an abstract interface corresponds to a change to its concrete implementations. Conversely, changes to concrete implementations do not always, or even usually, require changes to the interface that they implement
     - :arrow_forward: Therefore interfaces are less volatile than implementations.
@@ -347,17 +347,17 @@ the primary reason that dynamically typed languages create systems that are __mo
         - :white_check_mark: Don’t derive doom volatile concrete classes.
         - :white_check_mark: Don’t override concrete functions.
 
-#### Factories
+### Factories
 
 - To comply with these rules, the creation of volatile concrete objects requires special handling. In most object-oriented languages, such a Java, we would use an *Abstract Factory* to manage this undesirable factory.
 - The diagram below shows the structure:
     - The `Application` uses the `ConcreteImpl` though the `Service` interface.
-    - However the `Application` must somehow create instances of the `ConcreteImpl`. To achieve this without creating a source code dependency on the `ConcreteImpl`, the `Application` cals the `makeSvc` method of the `ServiceFactory` interface. This method is implemented by the `ServiceFactoryImpl` class, which derives from `ServiceFactory`. The implementation instantiates the `ConcreteImpl` and returns it as a `Service`.
+    - However the `Application` must somehow create instances of the `ConcreteImpl`. To achieve this without creating a source code dependency on the `ConcreteImpl`, the `Application` calls the `makeSvc` method of the `ServiceFactory` interface. This method is implemented by the `ServiceFactoryImpl` class, which derives from `ServiceFactory`. The implementation instantiates the `ConcreteImpl` and returns it as a `Service`.
     - The curved line is an architectural boundary, it separates the abstract from the concrete.
     <p align="center"><img src="assets/factories.png" width="400px" height="auto"></p>
 - The way the dependencies cross that curved line in one direction, and toward more abstract entities, will become a new rule that we will call the **Dependency Rule**.
 
-### Chapter 12 Components
+## Chapter 12 Components
 
 - Components are the __unit of deployment__. The smallest entities that can be deployed as part of a system.
     - In Java, they are jar files. In Ruby, they are gem files. In .NET, they are DLLs.
@@ -371,7 +371,7 @@ the primary reason that dynamically typed languages create systems that are __mo
         - Memory layout looks like this: <p align="center"><img src="assets/memory-layout-old-days.png" width="400px" height="auto"></p>
     - This works fine as long as the app could fit between addresses 0000 and 1777. But soon apps grow to be larger than the space allocated for them
 
-#### Relocatability
+### Relocatability
 
 - The compiler was changed to output binary code that could be relocated in memory by a smart loader.
 - The loader would be told where to load the relocatable code (`.reloc` in PE files :smile: ).
@@ -379,7 +379,7 @@ the primary reason that dynamically typed languages create systems that are __mo
 - The compiler was also changed to emit the names of the functions as metadata in the relocatable binary. If a program called a library function, the compiler would emit that name as an __external reference__. If a program defined a library function, the compiler would emit that name as an __external definition__. Then the loader could link the external references to the external definitions once it had determined where it had loaded those definitions.
 	- :cool: and the linking loader was born.
 
-#### Linkers
+### Linkers
 
 The linking loader allowed programmers to divide their programs up onto __separately compilable and loadable segments__. This worked well when relatively small programs were being linked with relatively small libraries.
 - Eventually, the linking loaders were __too slow to tolerate__. They had to read dozens, if not hundreds, of binary libraries (stored on slow devices) to resolve the external references.
@@ -389,49 +389,76 @@ The linking loader allowed programmers to divide their programs up onto __separa
 - By the mid-1990s, the time spent linking had begun to shrink faster than our
 ambitions could make programs grow (__thanks to Moore’s law__). In many cases, link time decreased to a matter of seconds.
 
-### Chapter 13: Component Cohesion
+## Chapter 13: Component Cohesion
 
-#### The Reuse/Release Equivalence Principle
+### The Reuse/Release Equivalence Principle
 
 - REP is a principle that seems obvious, at least in hindsight. People who want to reuse software components cannot, and will not, do so unless those components are __tracked through a release process__ and are given __release numbers__.
 
-#### The Common Closure Principle
+### The Common Closure Principle
 
 - Gather into components those classes that __change for the same reasons__ and at the __same times__. Separate into different components those classes that __change at different times__ and for __different reasons__.
 -This is the Single Responsibility Principle restated for __components__.
 
-#### The Common Reuse Principle
+### The Common Reuse Principle
 
 - Don’t force users of a component to depend on things they don’t need.
 - When we depend on a component, we want to make sure we depend __on every class__ in that component. Put another way, we want to make sure that the classes that we put into a component are __inseparable__ — that it is impossible to depend on some and not on the others. Otherwise, we will be redeploying more components than is necessary, and wasting significant effort.
 - The CRP is the generic version of the ISP. The ISP advises us not to depend on classes that have __methods__ we don’t use. The CRP advises us not to depend on __components__ that have classes we don’t use.
 
-#### The Tension Diagram for Component Cohesion
+### The Tension Diagram for Component Cohesion
 
 - The edges of the diagram describe the __cost of abandoning__ the principle on the opposite vertex.
 <p align="center"><img src="assets/cohesion-principles-tension.png" width="400px" height="auto"></p>
 
-### Chapter 14: Component Coupling
+## Chapter 14: Component Coupling
 
-#### The Acyclic Dependencies Principle
+### The Acyclic Dependencies Principle
 
-- the _morning after syndrome_ occurs in development environments wheremany developers are modifying the same source files. Some code that used to work are now no longer working because someone modified something you depends on.
-- two solutions to this problem have evolved: __the weekly build__ and the __Acyclic Dependencies Principle (ADP)__.
+- The _morning after syndrome_ occurs in development environments where many developers are modifying the same source files. Some code that used to work are now no longer working because someone modified something you depends on.
+- Two solutions to this problem have evolved: __The weekly build__ and the __Acyclic Dependencies Principle (ADP)__.
 
-##### The Weekly Build
+#### The Weekly Build
 
 - Used to be common in medium-sized projects.
 - All the developers ignore each other for the first four days of the week. Then, on Friday, they integrate all their changes and build the system.
-- :white_check_mark: allowing the developers to live in an isolated world for four days out of five.
-- :x: large integration penalty that is paid on Friday.
+- :white_check_mark: Allowing the developers to live in an isolated world for four days out of five.
+- :thumbsdown: Large integration penalty that is paid on Friday.
 - :arrow_forward: As the project size grows, integration and testing become increasingly harder to do.
 
-##### Eliminating Dependency Cycles
+#### Eliminating Dependency Cycles
 
 - The solution to this problem is to __partition__ the development environment into __releasable components__.
 - To make it work successfully, however, you must manage the __dependency structure__ of the components. There can be no cycles. If there are cycles in the dependency structure, then the _morning after syndrome_ cannot be avoided.
 
-<p align="center"><img src="assets/typical-components-diagram.png" width="400px" height="auto"></p>
+<p align="center"><img src="assets/typical-components-diagram.png" width="500px" height="auto"></p>
 
 - Regardless of which component you begin at, it is impossible to follow the dependency relationships and wind up back at that component. This structure has no cycles. It is a __directed acyclic graph (DAG)__.
 - When it is time to release the whole system, the process proceeds from the bottom up. First the `Entities` component is compiled, tested, and released. Then the same is done for `Database` and `Interactors`. These components are followed by `Presenters`, `View,` `Controllers`, and then `Authorizer`. `Main` goes last. This process is very clear and easy to deal with. We know how to build the system because we understand the dependencies between its parts.
+
+#### The Effect of a Cycle in the Component Dependency Graph
+
+- For example, let’s say that the `User` class in `Entities` uses the `Permissions` class in `Authorizer`. This creates a __dependency cycle__.
+- When such cycles in the dependency graph are created:
+ - :bangbang: All of the developers working on any of those components will experience the dreaded _morning after syndrome_.
+ - :bangbang: Unit testing and releasing become very difficult and error prone.
+
+#### Breaking the Cycle
+
+There are two primary mechanisms for doing so:
+1. Apply the Dependency Inversion Principle (DIP).
+2. Create a new component that both `Entities` and `Authorizer` depend on. Move the class(es) that they both depend on into that new component
+
+#### The “Jitters”
+
+- The second solution implies that the component structure is __volatile__ in the presence of changing requirements.
+  - As the app grow, the component dependency structure __jitters and grows__. Thus the dependency structure must always be monitored for cycles.
+  - When cycles occur, they must be __broken__ somehow. Sometimes this will mean creating new components, making the dependency structure grow.
+
+### Top-Down Design
+
+The component structure cannot be designed from the __top down__.
+- As more and more modules accumulate in the early stages of implementation and design:
+    :+1: Keep changes as __localized__ as possible, so we start paying attention to the __SRP__ and __CCP__ and collocate classes that are likely to change together.
+    :+1: Isolate volatile components. We don’t want components that change frequently and for capricious reasons to affect components that otherwise ought to be stable.
+- The component dependency structure grows and evolves with the logical design of the system.
