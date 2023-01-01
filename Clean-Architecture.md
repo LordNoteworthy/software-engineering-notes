@@ -398,7 +398,7 @@ ambitions could make programs grow (__thanks to Moore’s law__). In many cases,
 ### The Common Closure Principle
 
 - Gather into components those classes that __change for the same reasons__ and at the __same times__. Separate into different components those classes that __change at different times__ and for __different reasons__.
--This is the Single Responsibility Principle restated for __components__.
+- This is the Single Responsibility Principle restated for __components__.
 
 ### The Common Reuse Principle
 
@@ -438,16 +438,15 @@ ambitions could make programs grow (__thanks to Moore’s law__). In many cases,
 
 #### The Effect of a Cycle in the Component Dependency Graph
 
-- For example, let’s say that the `User` class in `Entities` uses the `Permissions` class in `Authorizer`. This creates a __dependency cycle__.
-- When such cycles in the dependency graph are created:
+- For example, let’s say that the `User` class in `Entities` uses the `Permissions` class in `Authorizer`. This creates a __dependency cycle__. When such cycles in the dependency graph are created:
  - :bangbang: All of the developers working on any of those components will experience the dreaded _morning after syndrome_.
  - :bangbang: Unit testing and releasing become very difficult and error prone.
 
 #### Breaking the Cycle
 
-There are two primary mechanisms for doing so:
-1. Apply the Dependency Inversion Principle (DIP).
-2. Create a new component that both `Entities` and `Authorizer` depend on. Move the class(es) that they both depend on into that new component
+- There are two primary mechanisms for doing so:
+  - Apply the Dependency Inversion Principle (DIP).
+  - Create a new component that both `Entities` and `Authorizer` depend on. Move the class(es) that they both depend on into that new component.
 
 #### The “Jitters”
 
@@ -462,3 +461,51 @@ The component structure cannot be designed from the __top down__.
     :+1: Keep changes as __localized__ as possible, so we start paying attention to the __SRP__ and __CCP__ and collocate classes that are likely to change together.
     :+1: Isolate volatile components. We don’t want components that change frequently and for capricious reasons to affect components that otherwise ought to be stable.
 - The component dependency structure grows and evolves with the logical design of the system.
+
+### The Stable Dependencies Principle
+
+- Designs cannot be completely __static__. Some volatility is necessary if the design is to be maintained.
+- Any component that we expect to be __volatile__ should not be depended on by a component that is difficult to change. Otherwise, the volatile component will also be difficult to change.
+
+#### Stability
+
+- One sure way to make a software component difficult to change, is to make lots of other software components depend on it. A component with lots of incoming __dependencies__ is __very stable__ because it requires a great deal of work to reconcile any changes with all the dependent components.
+
+- _X_, is a __stable__ component. Three components depend on _X_, so it has three good reasons __not to change__.
+- We say that _X_ is __responsible__ to those three components.
+- Conversely, _X_ depends on nothing, so it has no external influence to make it change. We say it is __independent__.
+
+```mermaid
+flowchart TD
+    a[[ ]] --> x[[x]]
+    b[[ ]] --> x
+    c[[ ]] --> x
+```
+- _Y_, is a very __unstable__ component. No other components depend on _Y_, so we say that it is __irresponsible__.
+- _Y_ also has three components that it depends on, so changes may come from three external sources. We say that _Y_ is __dependent__.
+
+```mermaid
+flowchart TD
+    y[[y]] --> a[[ ]]
+    y --> b[[ ]]
+    y --> c[[ ]]
+```
+
+#### Stability Metrics
+
+:question: How can we measure the stability of a component? Count the number of dependencies that enter and leave that component.
+- __Fan-in__: Incoming dependencies. This metric identifies the number of classes outside this component that depend on classes within the component.
+- __Fan-out__: Outgoing dependencies. This metric identifies the number of classes inside this component that depend on classes outside the component.
+- __I__: Instability: `I = Fan-out % (Fan-in + Fan-out)`. This metric has the range [0, 1]. I = 0 indicates a maximally stable component. I = 1 indicates a maximally unstable component.
+>  The SDP says that the I metric of a component should be larger than the I metrics of the components that it depends on. That is, I metrics should decrease in the direction of dependency.
+
+#### Not All Components Should Be Stable
+
+- `Flexible` is a component that we have designed to be easy to change. We want `Flexible` to be unstable.
+- However, some developer, working in the component named `Stable`, has hung a dependency on `Flexible`.
+- :bangbang: This violates the SDP because the I metric for `Stable` is much smaller than the I metric for `Flexible`.
+- :arrow_forward: `Flexible` will no longer be easy to change. A change to `Flexible` will force us to deal with Stable and all its
+dependents. <p align="center"><img src="assets/violating-sdp.png" width="300px" height="auto"></p>.
+- To fix this problem, we somehow have to __break__ the dependence of `Stable` on `Flexible` (DIP for the win).
+
+### The Stable Abstractions Principle
