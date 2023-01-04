@@ -458,8 +458,8 @@ ambitions could make programs grow (__thanks to Moore’s law__). In many cases,
 
 The component structure cannot be designed from the __top down__.
 - As more and more modules accumulate in the early stages of implementation and design:
-    :+1: Keep changes as __localized__ as possible, so we start paying attention to the __SRP__ and __CCP__ and collocate classes that are likely to change together.
-    :+1: Isolate volatile components. We don’t want components that change frequently and for capricious reasons to affect components that otherwise ought to be stable.
+    - :+1: Keep changes as __localized__ as possible, so we start paying attention to the __SRP__ and __CCP__ and collocate classes that are likely to change together.
+    - :+1: Isolate volatile components. We don’t want components that change frequently and for capricious reasons to affect components that otherwise ought to be stable.
 - The component dependency structure grows and evolves with the logical design of the system.
 
 ### The Stable Dependencies Principle
@@ -509,3 +509,41 @@ dependents. <p align="center"><img src="assets/violating-sdp.png" width="300px" 
 - To fix this problem, we somehow have to __break__ the dependence of `Stable` on `Flexible` (DIP for the win).
 
 ### The Stable Abstractions Principle
+
+> A component should be as abstract as it is stable.
+
+#### Where Do We Put the High-Level Policy?
+
+- Some software in the system should not change very often. This software represents **high-level architecture and policy decisions**. We don’t want these business and architectural decisions to be **volatile**.
+- However, if the high-level policies are placed into stable components, then the source code that represents those policies will be **difficult to change**.
+- :arrow_forward: This could make the overall architecture inflexible. How can a component that is maximally stable (I = 0) be flexible enough to withstand change :question: ==> The answer is found in the OCP.
+
+#### Introducing the Stable Abstractions Principle
+
+- The Stable Abstractions Principle (SAP) sets up a relationship between **stability** and **abstractness**.
+- On the one hand, it says that a **stable** component should also be **abstract** so that its stability does not prevent it from being **extended**.
+- On the other hand, it says that an **unstable** component should be **concrete** since it its instability allows the concrete code within it to be easily changed.
+- :arrow_forward: If a component is to be stable, it should consist of interfaces and abstract classes so that it can be extended.
+- The SAP and the SDP combined amount to the DIP for components. This is true because the SDP says that dependencies should run in the direction of stability, and the SAP says that stability implies abstraction. Thus _dependencies run in the direction of abstraction_.
+
+#### Measuring Abstraction
+
+- The `A` metric is a measure of the abstractness of a component. Its value is simply the ratio of interfaces and abstract classes in a component to the total number of classes in the component.
+- The A metric ranges from 0 to 1. A value of 0 implies that the component has no abstract classes at all. A value of 1 implies that the component contains nothing but abstract classes.
+
+- #### The Main Sequence
+
+- We are now in a position to define the relationship between stability (I) and abstractness (A).
+- If we plot the two “good” kinds of components on this graph, we will find the components that are maximally stable and abstract at the upper left at (0, 1). The components that are maximally unstable and concrete are at the lower right at (1, 0). <p align="center"><img src="assets/zone-of-exclusion.png" width="300px" height="auto"></p>.
+- :+1+ Strive to be close to the **main sequence** and far from the **zones of exclusion**.
+
+#### The Zone of Pain
+
+- Consider a component in the area of (0, 0). This is a highly stable and concrete component. Such a component is not desirable because it is rigid. It cannot be extended because it is not abstract, and it is very difficult to change because of its stability.
+- :arrow_forward: An example of that would be a database schema.
+
+#### The Zone of Uselessness
+
+- Consider a component near (1, 1). This location is undesirable because it is maximally abstract, yet has no dependents.
+- :-1: Such components are useless.
+- :arrow_forward: An example of that are leftover abstract classes that no one ever implemented. We find them in systems from time to time, sitting in the code base, unused.
