@@ -22,9 +22,9 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
 ## Chapter 1. What is design and architecture
 
 - the word __architecture__ is often used in the context of something at a _high level_ that is divorced from the low-level details, whereas __design__ more often seems to imply structures and decisions at a _low level_.
-- the low-level details and the high-level structure are all part of the same whole, they form a continuous fabric that defines the shape of the system. You can't have one without the other; indeed __no clear deviding__ lines separates them.
+- the low-level details and the high-level structure are all part of the same whole, they form a continuous fabric that defines the shape of the system. You can't have one without the other; indeed __no clear dividing__ lines separates them.
 - the measure of __design quality__ is simply the measure of the __effort required__ to meet the needs if the customer.
-- developers buy into a familir lie:
+- developers buy into a familiar lie:
     - we can __clean it up later__; we just need to get to __market first__ but things never do get cleaned up later because market pressures never abate.
     - making __messy code__ makes them go __fast__ in the short term and just slows them down in the long term.
 - a fact is that making messes is _always_ slower then staying clean, no matter which time scale you are using.
@@ -470,11 +470,9 @@ The component structure cannot be designed from the __top down__.
 #### Stability
 
 - One sure way to make a software component difficult to change, is to make lots of other software components depend on it. A component with lots of incoming __dependencies__ is __very stable__ because it requires a great deal of work to reconcile any changes with all the dependent components.
-
 - _X_, is a __stable__ component. Three components depend on _X_, so it has three good reasons __not to change__.
 - We say that _X_ is __responsible__ to those three components.
 - Conversely, _X_ depends on nothing, so it has no external influence to make it change. We say it is __independent__.
-
 ```mermaid
 flowchart TD
     a[[ ]] --> x[[x]]
@@ -516,7 +514,7 @@ dependents. <p align="center"><img src="assets/violating-sdp.png" width="300px" 
 
 - Some software in the system should not change very often. This software represents **high-level architecture and policy decisions**. We don’t want these business and architectural decisions to be **volatile**.
 - However, if the high-level policies are placed into stable components, then the source code that represents those policies will be **difficult to change**.
-- :arrow_forward: This could make the overall architecture inflexible. How can a component that is maximally stable (I = 0) be flexible enough to withstand change :question: ==> The answer is found in the OCP.
+:arrow_forward: This could make the overall architecture inflexible. How can a component that is maximally stable (I = 0) be flexible enough to withstand change :question: ==> The answer is found in the OCP.
 
 #### Introducing the Stable Abstractions Principle
 
@@ -531,11 +529,11 @@ dependents. <p align="center"><img src="assets/violating-sdp.png" width="300px" 
 - The `A` metric is a measure of the abstractness of a component. Its value is simply the ratio of interfaces and abstract classes in a component to the total number of classes in the component.
 - The A metric ranges from 0 to 1. A value of 0 implies that the component has no abstract classes at all. A value of 1 implies that the component contains nothing but abstract classes.
 
-- #### The Main Sequence
+#### The Main Sequence
 
 - We are now in a position to define the relationship between stability (I) and abstractness (A).
 - If we plot the two “good” kinds of components on this graph, we will find the components that are maximally stable and abstract at the upper left at (0, 1). The components that are maximally unstable and concrete are at the lower right at (1, 0). <p align="center"><img src="assets/zone-of-exclusion.png" width="300px" height="auto"></p>.
-- :+1+ Strive to be close to the **main sequence** and far from the **zones of exclusion**.
+- :+1: Strive to be close to the **main sequence** and far from the **zones of exclusion**.
 
 #### The Zone of Pain
 
@@ -547,3 +545,36 @@ dependents. <p align="center"><img src="assets/violating-sdp.png" width="300px" 
 - Consider a component near (1, 1). This location is undesirable because it is maximally abstract, yet has no dependents.
 - :-1: Such components are useless.
 - :arrow_forward: An example of that are leftover abstract classes that no one ever implemented. We find them in systems from time to time, sitting in the code base, unused.
+
+## Chapter 15 What Is Architecture?
+
+- The architecture of a software system is the shape given to that system by those who build it. The form of that shape is in the division of that system into components, the arrangement of those components, and the ways in which those components communicate with each other.
+- :+1: Good architecture makes the system easy to **understand**, easy to **develop**, easy to **maintain**, and easy to **deploy**. The ultimate goal is to minimize the lifetime **cost** of the system and to maximize programmer **productivity**.
+
+### Development
+
+- ‼️ A software system that is hard to develop is not likely to have a long and healthy lifetime. So the architecture of a system should make that system easy to develop, for the team(s) who develop it.
+
+### Deployment
+
+- ‼️ Unfortunately, deployment strategy is seldom considered during initial development. This leads to architectures that may make the system easy to develop, but leave it very difficult to deploy.
+
+### Operation
+
+- 🛸 The fact that **hardware is cheap** and **people are expensive** means that architectures that impede operation are not
+as costly as architectures that impede development, deployment, and maintenance.
+
+### Maintenance
+
+- ‼️ Of all the aspects of a software system, **maintenance** is the most **costly**. The never-ending parade of new features and the inevitable trail of defects and corrections consume vast amounts of human resources.
+- The primary cost of maintenance is in **spelunking** and risk. Spelunking is the cost of digging through the existing software, trying to determine the best place and the best strategy to add a new feature or to repair a defect. While
+making such changes, the likelihood of creating inadvertent defects is always there, adding to the cost of risk.
+
+### Keeping Options Open
+
+- The way you keep software soft is to **leave as many options open as possible**, for as long as possible. What are the options that we need to leave open? ▶️ They are the details that don’t matter.
+All software systems can be decomposed into two major elements: **policy** and **details**.
+ - The policy element embodies all the business rules and procedures.  The policy is where the true value of the system lives.
+ - The details are those things that are necessary to enable humans, other systems, and programmers to communicate with the policy, but that do not impact the behavior of the policy at all. They include IO devices, databases, web systems, servers, frameworks, communication protocols, and so forth.
+- The goal of the architect is to create a shape for the system that recognizes policy as the most essential element of the system while **making the details irrelevant to that policy**. This allows decisions about those details to be delayed and deferred. The longer you wait to make those decisions, the more information you have with which to make them properly.
+- The longer you leave options open, the more experiments you can run, the more things you can try, and the more information you will have when you reach the point at which those decisions can no longer be deferred.
