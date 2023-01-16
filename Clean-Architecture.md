@@ -578,3 +578,51 @@ All software systems can be decomposed into two major elements: **policy** and *
  - The details are those things that are necessary to enable humans, other systems, and programmers to communicate with the policy, but that do not impact the behavior of the policy at all. They include IO devices, databases, web systems, servers, frameworks, communication protocols, and so forth.
 - The goal of the architect is to create a shape for the system that recognizes policy as the most essential element of the system while **making the details irrelevant to that policy**. This allows decisions about those details to be delayed and deferred. The longer you wait to make those decisions, the more information you have with which to make them properly.
 - The longer you leave options open, the more experiments you can run, the more things you can try, and the more information you will have when you reach the point at which those decisions can no longer be deferred.
+
+## Chapter 16 Independence
+
+### Decoupling Layers
+
+- Example of layers we can decouple:
+    - **User interfaces** change for reasons that have nothing to do with **business rules**.
+    - **Business rules** themselves may be closely tied to the application, or they may be more general.
+    - **The database**, the **query language**, and even the **schema** are technical details that have nothing to do with the business rules or the UI.
+
+### Decoupling Use Cases
+
+- The use case for _adding an order_ to an order entry system almost certainly will change at a different rate, and for different reasons, than the use case that *deletes an order* from the system.
+- Each use case uses some UI, some application-specific business rules, some application-independent business rules, and some database functionality. Thus, as we are dividing the system in to **horizontal layers**, we are also dividing the system into **thin vertical** use cases that cut through those layers.
+
+### Decoupling Mode
+
+- If the different aspects of the use cases are separated, then those that must run at a high throughput are likely already separated from those that must run at a low throughput.
+- If the UI and the database have been separated from the business rules, then they can run in different servers. Those that require higher bandwidth can be replicated in many servers.
+- ▶️ In short, the decoupling that we did for the sake of the use cases also helps with operations.
+- The point being made here is that sometimes we have to separate our components all the way to the **service level**.
+
+### Independent Develop-ability
+
+▶️ So long as the layers and use cases are decoupled, the architecture of the system will support the organization of the teams, irrespective of whether they are organized as **feature** teams, **component** teams, **layer** teams, or some other variation.
+
+### Independent Deployability
+
+▶️ The decoupling of the use cases and layers also affords a high degree of flexibility in deployment.
+
+### Duplication
+
+- There are different kinds of duplication:
+    - **True duplication**, in which every change to one instance necessitates the same change to every duplicate of that instance.
+    - **False or accidental duplication**: If two apparently duplicated sections of code evolve along different paths—if they change at different rates, and for different reasons—then they are not true duplicates.
+- When you are **vertically separating** use cases from one another, you will run into this issue, and your temptation will be to couple the use cases because they have similar screen structures, or similar algorithms, or similar database queries and/or schemas. ‼️ Be careful. Resist the temptation to commit the sin of knee-jerk elimination of duplication. Make sure the duplication is real.
+- By the same token, when you are separating **layers horizontally**, you might notice that the data structure of a particular database record is very similar to the data structure of a particular screen view. You may be tempted to simply pass the database record up to the UI, rather than to create a view model that looks the same and copy the elements across. Be careful: ‼️ This duplication is almost certainly accidental.
+
+### Decoupling Modes (Again)
+
+- Back to modes. There are many ways to decouple layers and use cases.:
+    - **Source level**. We can control the dependencies between source code modules so that changes to one module do not force changes or recompilation of others (e.g., Ruby Gems).
+    -  **Deployment level**. We can control the dependencies between deployable units such as jar files, DLLs, or shared libraries, so that changes to the source code in one module do not force others to be rebuilt and redeployed.
+    - **Service level**. We can reduce the dependencies down to the level of data structures, and communicate solely through network packets such that every execution unit is entirely independent of source and binary changes to others (e.g., services or micro-services).
+
+What is the best mode to use ❓
+
+> A good architecture will allow a system to be born as a monolith, deployed in a single file, but then to grow into a set of independently deployable units, and then all the way to independent services and/or micro-services. Later, as things change, it should allow for reversing that progression and sliding all the way back down into a monolith.
