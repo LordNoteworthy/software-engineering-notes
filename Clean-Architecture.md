@@ -626,3 +626,48 @@ All software systems can be decomposed into two major elements: **policy** and *
 What is the best mode to use ❓
 
 > A good architecture will allow a system to be born as a monolith, deployed in a single file, but then to grow into a set of independently deployable units, and then all the way to independent services and/or micro-services. Later, as things change, it should allow for reversing that progression and sliding all the way back down into a monolith.
+
+## Chapter 17 Boundaries: Drawing Lines
+
+- Software architecture is the art of drawing lines that I call *boundaries*. Those boundaries separate software elements from one another, and restrict those on one side from knowing about those on the other.
+
+### A Couple of Sad Stories
+
+- Company *P* used a *three-tiered architecture* for implementing a web solution. The programmers decided, very early on, that all domain objects would have three instantiations: one in the GUI tier, one in the middleware tier, and one in the database tier.
+- The architect did not think of all the object instantiations, all the serializations, all the marshaling and de-marshaling, all the building and parsing of messages, all the socket communications, timeout managers, retry scenarios, and all the other extra stuff that you have to do just to get one simple thing done: adding a new field to an existing record 😵.
+- The irony is that company *P* never sold a system that required a server farm. Every system they ever deployed was a single server.
+- Similarly, company *W* prematurely adopted and enforced a suite of tools that promised *SOA*.
+- To test anything you had to fire up all the necessary services, one by one, and fire up the message bus, and the BPel server, and ... And then, there were the propagation delays as these messages bounced from service to service, and waited in queue after queue.
+- And then if you wanted to add a new feature—well, you can imagine the coupling between all those services, and the sheer volume of WSDLs that needed changing, and all the redeployments those changes necessitated ...
+
+### FitNesse
+
+- The idea was to create a simple wiki that wrapped Ward Cunningham’s FIT tool for writing acceptance tests.
+- One of the first decisions was to **write our own web server**, specific to the needs of `FitNesse`.
+    - ▶️ Postpone any web framework decision until much later.
+- Also, avoid thinking about a database. We had MySQL in the back of our minds, but we purposely **delayed** that decision by employing a design that made the decision irrelevant. That design was simply to put an interface named `WikiPage` between all data accesses and the data repository itself.
+- Early in the development of `FitNesse`, we drew a **boundary line between business rules and databases**. That line prevented the business rules from knowing anything at all about the database, other than the simple data access methods.
+- The fact that we did not have a database running for early stages of development meant that, we did not have schema issues, query issues, database server issues, password issues, connection time issues, and all the other nasty issues that raise their ugly heads when you fire up a database 🤦.
+
+### Which Lines Do You Draw, and When Do You Draw Them?
+
+- You draw lines between things that matter and things that don’t.
+	- The GUI doesn’t matter to the business rules, so there should be a line between them.
+	- The database doesn’t matter to the GUI, so there should be a line between them.
+	- The database doesn’t matter to the business rules, so there should be a line between them.
+- The `BusinessRules` use the `DatabaseInterface` to load and save data. The `DatabaseAccess` implements the interface and directs the operation of the actual Database. <p align="center"><img src="assets/db-behind-interface.png" width="300px" height="auto"></p>
+- Where is the boundary line? The boundary is drawn across the inheritance relationship, just below the `DatabaseInterface`.<p align="center"><img src="assets/boundary-line.png" width="300px" height="auto"></p>
+- Note the direction of the arrow. The Database knows about the `BusinessRules`. The `BusinessRules` do not know about the Database. This implies that the `DatabaseInterface` classes live in the `BusinessRules` component, while the `DatabaseAccess` classes live in the Database component. <p align="center"><img src="assets/business-rules-and-database-components.png" width="300px" height="auto"></p>
+- The direction of this line is important. It shows that the `Database` does not matter to the `BusinessRules`, but the `Database` cannot exist without the BusinessRules.
+
+### What About Input and Output?
+
+- Developers often think that the **GUI** is the system. They define a system in terms of the GUI, so they believe that they should see the GUI start working immediately. They fail to realize a critically important principle: **The IO is irrelevant**.
+- And so, once again, we see the GUI and `BusinessRules` components separated by a boundary line. <p align="center"><img src="assets/boundary-gui-business-rules.png" width="300px" height="auto"></p>
+
+### Plugin Architecture
+
+- Taken together, these two decisions about the database and the GUI create a kind of pattern for the addition of other components. That pattern is the same pattern that is used by systems that allow third-party **plugins**.
+- Because the UI in this design is considered to be a plugin, we have made it possible to plug in many different kinds of user interfaces (web based, client/server based, SOA based, Console based, etc...).
+- THe same is true of the database. Since we have chosen to treat it as a plugin, we can replace it with any of the various SQL databases, or a NOSQL or a file system-based database, or any other kind of database.
+<p align="center"><img src="assets/plugging-in-to-business-rules.png" width="300px" height="auto"></p>
