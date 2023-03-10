@@ -633,10 +633,10 @@ What is the best mode to use ❓
 
 ### A Couple of Sad Stories
 
-- Company *P* used a *three-tiered architecture* for implementing a web solution. The programmers decided, very early on, that all domain objects would have three instantiations: one in the GUI tier, one in the middleware tier, and one in the database tier.
+- Company *P* used a *three-tiered architecture* for implementing a web solution. The programmers decided, very early on, that all domain objects would have three instantiations: one in the **GUI** tier, one in the **middleware** tier, and one in the **database** tier.
 - The architect did not think of all the object instantiations, all the serializations, all the marshaling and de-marshaling, all the building and parsing of messages, all the socket communications, timeout managers, retry scenarios, and all the other extra stuff that you have to do just to get one simple thing done: adding a new field to an existing record 😵.
 - The irony is that company *P* never sold a system that required a server farm. Every system they ever deployed was a single server.
-- Similarly, company *W* prematurely adopted and enforced a suite of tools that promised *SOA*.
+- Similarly, company *W* **prematurely** adopted and enforced a suite of tools that promised *SOA*.
 - To test anything you had to fire up all the necessary services, one by one, and fire up the message bus, and the BPel server, and ... And then, there were the propagation delays as these messages bounced from service to service, and waited in queue after queue.
 - And then if you wanted to add a new feature—well, you can imagine the coupling between all those services, and the sheer volume of WSDLs that needed changing, and all the redeployments those changes necessitated ...
 
@@ -645,7 +645,7 @@ What is the best mode to use ❓
 - The idea was to create a simple wiki that wrapped Ward Cunningham’s FIT tool for writing acceptance tests.
 - One of the first decisions was to **write our own web server**, specific to the needs of `FitNesse`.
     - ▶️ Postpone any web framework decision until much later.
-- Also, avoid thinking about a database. We had MySQL in the back of our minds, but we purposely **delayed** that decision by employing a design that made the decision irrelevant. That design was simply to put an interface named `WikiPage` between all data accesses and the data repository itself.
+- Also, avoid thinking about a database. We had `MySQL` in the back of our minds, but we purposely **delayed** that decision by employing a design that made the decision irrelevant. That design was simply to put an interface named `WikiPage` between all data accesses and the data repository itself.
 - Early in the development of `FitNesse`, we drew a **boundary line between business rules and databases**. That line prevented the business rules from knowing anything at all about the database, other than the simple data access methods.
 - The fact that we did not have a database running for early stages of development meant that, we did not have schema issues, query issues, database server issues, password issues, connection time issues, and all the other nasty issues that raise their ugly heads when you fire up a database 🤦.
 
@@ -669,5 +669,207 @@ What is the best mode to use ❓
 
 - Taken together, these two decisions about the database and the GUI create a kind of pattern for the addition of other components. That pattern is the same pattern that is used by systems that allow third-party **plugins**.
 - Because the UI in this design is considered to be a plugin, we have made it possible to plug in many different kinds of user interfaces (web based, client/server based, SOA based, Console based, etc...).
-- THe same is true of the database. Since we have chosen to treat it as a plugin, we can replace it with any of the various SQL databases, or a NOSQL or a file system-based database, or any other kind of database.
+- THe same is true of the database. Since we have chosen to treat it as a plugin, we can replace it with any of the various `SQL` databases, or a `NOSQL` or a file system-based database, or any other kind of database.
 <p align="center"><img src="assets/plugging-in-to-business-rules.png" width="300px" height="auto"></p>
+
+## Chapter 18 TODO: Complete this chapter
+
+## Chapter 19: Policy and Level
+
+- Software systems are statements of **policy**. A computer program is a detailed description of the policy by which inputs are transformed into outputs.
+- Part of the art of developing a software architecture is carefully separating those policies from one another, and regrouping them based on the ways that they change. Policies that change for the **same reasons**, and at the **same times**, are at the **same level** and belong together in the **same component**. Policies that change for **different reasons**, or at **different times**, are at **different levels** and should be **separated** into **different components**.
+- Low-level components are designed so that they depend on high-level components.
+
+### Level
+
+- The **farther** a policy is from both the inputs and the outputs of the system, the **higher** its level.
+<p align="center"><img src="assets/class-diagram-low-high-level-policy.png" width="300px" height="auto"></p>
+
+- *ConsoleReader* and *ConsoleWriter* are shown here as classes. They are low level because they are close to the inputs and outputs.
+- This structure decouples the high-level encryption policy from the lower-level input/output policies. This makes the *encryption* policy usable in a wide range of contexts. When changes are made to the input and output policies, they are not likely to affect the encryption policy.
+- Keeping these policies separate, with all source code dependencies pointing in the **direction of the higher-level** policies, **reduces the impact of change**. Trivial but urgent changes at the lowest levels of the system have little or no impact on the higher, more important, levels.
+
+## Chapter 20: Business Rules
+
+- Strictly speaking, **business rules** are rules or procedures that make or save the business money.
+- Very strictly speaking, these rules would make the business money, **irrespective** of whether they were implemented on a **computer**. They would make money even if they were executed **manually**.
+- **Critical Business Rules** are the rules that are critical to the business itself, and would exist even if there were no system to automate them (bank charges N% interest for a loan is a critical business rule).
+- Critical Business Rules usually require some data to work with. For example, our loan requires a loan balance, an interest rate, and a payment schedule. We shall call this data **Critical Business Data**. This is the data that would exist even if the system were not **automated**.
+
+### Entities
+
+- An **Entity** is an object within our computer system that embodies a small set of critical business rules operating on Critical Business Data. The Entity object either contains the Critical Business Data or has very easy access to that data. The interface of the Entity consists of the functions that implement the Critical Business Rules that operate on that data.
+<p align="center"><img src="assets/loan-entity.png" width="300px" height="auto"></p>
+
+- This class stands alone as a representative of the business. It is **unsullied** with **concerns about databases**, **user interfaces**, or **third-party frameworks**. It could serve the business in any system, irrespective of how that system was presented, or how the data was stored, or how the computers in that system were arranged. :bulb: The Entity is pure business and nothing else.
+
+### Use Cases
+
+- Not all business rules are as pure as `Entities`.
+- A use case is a description of the way that an automated system is used. They make sense only as part of an **automated** system.
+- A use case describes **application-specific** business rules as opposed to the Critical Business Rules within the Entities.
+- :bangbang: Use cases do not describe how the system **appears to the user**. Instead, they describe the application-specific rules that govern the interaction between the users and the Entities. How the data gets in and out of the system is **irrelevant** to the use cases.
+- Entities have **no knowledge** of the use cases that control them. This is another example of the direction of the dependencies following the `DIP`. High-level concepts, such as Entities, **know nothing** of lower-level concepts, such as use cases. Instead, the lower-level use cases know about the higher-level Entities.
+
+### Request and Response Models
+
+- Use cases expect input data, and they produce output data. However, a well-formed use case object should have no inkling about the way that data is communicated to the user, or to any other component. We certainly don’t want the code within the use case class to know about HTML or SQL!
+- This lack of dependencies is **critical**. If the request and response models are **not independent**, then the use cases that depend on them will be indirectly bound to whatever dependencies the models carry with them.
+
+## Chapter 21: Screaming Architecture
+
+- What does the architecture of your application **scream**? When you look at the **top-level directory** structure, and the source files in the highest-level package, do they scream “*Health Care System*” or “*Accounting System*” or “*Inventory Management System*”? Or do they scream *“Rails*” or “*Spring/Hibernate*” or “*ASP*”?
+
+### The Theme of an Architecture
+
+- Just as the plans for a house or a library scream about the use cases of those buildings, so should the architecture of a software application scream about the use cases of the application.
+- Architectures are not (or should not be) about **frameworks**. Architectures should not be supplied by frameworks. Frameworks are **tools** to be used, not architectures to be conformed to. If your architecture is based on frameworks, then it cannot be based on your use cases.
+
+### The Purpose of an Architecture
+
+- Good architectures are centered on use cases so that architects can safely describe the structures that support those use cases without committing to frameworks, tools, and environments.
+
+### But What About the Web?
+
+- The web is a delivery mechanism — an **IO device**— and your application architecture should treat it as such. The fact that your application is delivered over the web is a **detail** and should not dominate your system structure.
+
+### Frameworks Are Tools, Not Ways of Life
+
+- Frameworks can be very powerful and very useful.
+- However, look at each framework with a jaded eye. View it **skeptically**. Yes, it might help, but at what **cost**? Ask yourself how you should use it, and how you should **protect** yourself from it. Think about how you can preserve the use-case emphasis of your architecture.
+- :+1: Develop a strategy that prevents the framework from taking over that architecture.
+
+### Testable Architectures
+
+- If your system architecture is all about the use cases, and if you have kept your frameworks at arm’s length, then you should be able to unit-test all those use cases **without any of the frameworks** in place. You shouldn’t need the **web server** running to run your tests. You shouldn’t need the **database** connected to run your tests. Your Entity objects should be plain old objects that have **no dependencies** on frameworks or databases or other complications.
+
+## Chapter 22: The Clean Architecture
+
+- Over the last several decades we’ve seen a whole range of ideas regarding the architecture of systems. These include:
+	- Hexagonal Architecture (also known as Ports and Adapters)
+	- DCI
+	- BCE
+- Although these architectures all vary somewhat in their details, they are very similar. They all have the same objective, which is the **separation of concerns**. They all achieve this separation by dividing the software into **layers**. Each has at least **one layer for business rules**, and **another layer for user and system interfaces**.
+- Each of these architectures produces systems that have the following characteristics:
+	- Independent of frameworks
+	- Testable
+	- Independent of the UI
+	- Independent of the database
+	- Independent of any external agency
+<p align="center"><img src="assets/clean-architecture.png" width="300px" height="auto"></p>
+
+### The Dependency Rule
+
+- The further in you go, the higher level the software becomes. The outer circles are **mechanisms**. The inner circles are **policies**.
+- Source code dependencies must point only inward, toward higher-level policies.
+
+### Interface Adapters
+
+- The software in the interface adapters layer is a set of adapters that **convert** data from the format most convenient for the use **cases and entities**, to the format most convenient for some **external agency** such as the database or the web.
+- It is this layer, for example, that will wholly contain the `MVC` architecture of a GUI.
+
+### Only Four Circles?
+
+- Dependency Rule always applies. Source code **dependencies** always point **inward**. As you move inward, the level of **abstraction** and **policy** **increases**. The outermost circle consists of **low-level** concrete **details**. As you move **inward**, the software grows more **abstract** and **encapsulates** **higher-level** policies. The innermost circle is the most general and highest level.
+
+### Crossing Boundaries
+
+- For example, suppose the use case needs to call the *presenter*. This call must not be **direct** because that would violate the **Dependency Rule**: No name in an outer circle can be mentioned by an inner circle. So we have the use case call an **interface** (shown in Figure above as “use case output port”) in the inner circle, and have the presenter in the outer circle **implement** it.
+
+### Which Data Crosses the Boundaries
+
+- Typically the data that crosses the boundaries consists of **simple** data structures. You can use basic structs or simple data transfer objects if you like. Or the data can simply be arguments in **function calls**. Or you can pack it into a **hashmap**, or construct it into an **object**.
+- When we pass data across a boundary, it is always in the form that is **most convenient for the inner circle**.
+
+## Chapter 23 Presenters and Humble Objects
+
+### The Humble Object Pattern
+
+- Is a design pattern that was originally identified as a way to help unit testers to **separate behaviors** that are hard to test from behaviors that are easy to test.
+- The idea is very simple: **split the behaviors into two modules or classes**.
+	- One of those modules is humble; it contains all the hard-to-test behaviors stripped down to their barest essence.
+	- The other module contains all the testable behaviors that were stripped out of the humble object.
+- For example, GUIs are hard to unit test because it is very difficult to write tests that can see the screen and check that the appropriate elements are displayed there. However, most of the behavior of a GUI is, in fact, easy to test. Using the Humble Object pattern, we can separate these two kinds of behaviors into two different classes called the **Presenter** and the **View**.
+
+### Presenters and Views
+
+- The View is the humble object that is **hard to test**. The code in this object is kept as simple as possible. It moves data into the GUI but does not process that data.
+- The Presenter is the **testable object**. Its job is to accept data from the application and format it for presentation so that the View can simply move it to the screen.
+
+### Testing and Architecture
+
+- The Humble Object pattern is a good example, because the separation of the behaviors into testable and non-testable parts often defines an **architectural boundary**. The **Presenter/View** boundary is one of these boundaries, but there are many others.
+
+- Conclusion: At each architectural boundary, we are likely to find the Humble Object pattern lurking somewhere nearby. The communication across that boundary will almost always involve some kind of simple data structure, and the boundary will frequently divide something that is hard to test from something that is easy to test. The use of this pattern at architectural boundaries vastly increases the testability of the entire system.
+
+## Chapter 24: Partial Boundaries
+
+- Full-fledged architectural boundaries are **expensive**. They require reciprocal polymorphic Boundary interfaces, *Input* and *Output* data structures, and all of the **dependency management** necessary to **isolate** the two sides into independently **compilable** and **deployable** components.
+- A potential solution is to create a **partial boundary**.
+
+### Skip the Last Step
+
+- One way to construct a partial boundary is to do all the work necessary to create independently compilable and deployable components, and then simply **keep them together in the same component**.
+- The reciprocal interfaces are there, the input/output data structures are there, and everything is all set up—but we compile and deploy all of them as a **single component**.
+- Obviously, this kind of partial boundary requires the same amount of code and preparatory design work as a full boundary. However, it does not require the **administration** of **multiple** components. There’s **no version number tracking** or **release management burden**. That difference should not be taken lightly.
+
+### One-Dimensional Boundaries
+
+- A simpler structure that serves to hold the place for later extension to a full- fledged boundary is shown below. It exemplifies the traditional **Strategy** pattern. A `ServiceBoundary` interface is used by clients and implemented by `ServiceImpl` classes.
+<p align="center"><img src="assets/strategy-pattern.png" width="300px" height="auto"></p>
+
+### Facades
+
+- An even simpler boundary is the **Facade** pattern, illustrated below. In this case, even the **dependency inversion** is **sacrificed**. The boundary is simply defined by the Facade class, which lists all the services as methods, and deploys the service calls to classes that the client is not supposed to access.
+<p align="center"><img src="assets/facade-pattern.png" width="300px" height="auto"></p>
+
+### Chapter 25: Layers and Boundaries
+
+- It is easy to think of systems as being composed of three components: UI, business rules, and database.
+- For some simple systems, this is sufficient. For most systems, though, the number of components is larger than that.
+- Consider, for example, a simple computer game (Hunt The Wumpus). It is easy to imagine the three components. The UI handles all messages from the player to the game rules. The game rules store the state of the game in some kind of persistent data structure. But is that all there is?
+- Of course, no ! It should be clear that we could easily apply the clean architecture approach in this context:
+<p align="center"><img src="assets/clean-architecture-hunt-the-wumpus.png" width="300px" height="auto"></p>
+
+1. Decouple text based UI from the game rules so that our version can use different languages in different markets. The game rules will communicate with the UI component using a language-independent API, and the UI will translate the API into the appropriate human language.
+2. The state of the game is maintained on some persistent store—perhaps in flash, or perhaps in the cloud, or maybe just in RAM, we’ll create an API that the game rules can use to communicate with the data storage component.
+3. We also might want to vary the mechanism by which we communicate the text. For example, we might want to use a normal shell window, or text messages, or a chat application. We should construct an API that crosses that boundary and isolates the language from the communications mechanism.
+- Conclusion: On the one hand, some very smart people have told us, over the years, that we should not **anticipate the need for abstraction**. This is the philosophy of `YAGNI`: “*You aren’t going to need it.*” There is wisdom in this message, since o**ver-engineering is often much worse than under-engineering**. On the other hand, when you discover that you truly do need an architectural boundary where none exists, the costs and risks can be very high to add such a boundary.
+- You must weigh the costs and determine where the architectural boundaries lie, and which should be fully implemented, and which should be partially implemented, and which should be ignored. This is an **on-going process** that every architect should do as the system evolves.
+
+## Chapter 26: The Main Component
+
+### The Ultimate Detail
+
+- The **Main** component is the ultimate detail—the **lowest-level policy**. It is the initial entry point of the system. Nothing, other than the OS, depends on it. Its job is to create all the Factories, Strategies, and other global facilities, and then hand control over to the high-level abstract portions of the system.
+- It is in this `Main` component that **dependencies** should be **injected** by a **Dependency Injection framework**. Once they are injected into `Main`, `Main` should distribute those dependencies normally, without using the framework.
+- Think of `Main` as the **dirtiest** of all the dirty components.
+- Think of `Main` as a **plugin** to the application—a plugin that sets up the initial conditions and configurations, gathers all the outside resources, and then hands control over to the high-level policy of the application. Since it is a plugin, it is possible to have many `Main` components, one for each configuration of your application.
+
+## Chapter 27: Services: Great and Small
+
+### Service Architecture?
+
+- Services that simply separate application behaviors are little more than expensive function calls, and are not necessarily **architecturally significant**.
+- This is not to say that all services should be architecturally significant. There are often substantial benefits to creating services that separate functionality across processes and platforms—whether they obey the Dependency Rule or not. It’s just that services, in and of themselves, **do not define an architecture**.
+
+### Service Benefits?
+
+- The question mark in the preceding heading indicates that this section is going to challenge the current popular orthodoxy of service architecture.
+
+#### The Decoupling Fallacy
+
+- One of the big supposed benefits of breaking a system up into services is that services are strongly decoupled from each other.
+- Yes, services are decoupled at the level of **individual variables**. However, they can still be coupled by shared resources within a processor, or on the network. What’s more, they are strongly **coupled by the data they share**.
+
+### The Fallacy of Independent Development and Deployment
+
+- Another of the supposed benefits of services is that they can be owned and operated by a dedicated team.
+- That team can be responsible for writing, maintaining, and operating the service as part of a dev-ops strategy. This independence of development and deployment is presumed to be *scalable*.
+- The decoupling fallacy means that services cannot always be independently developed, deployed, and operated. To the extent that they are **coupled by data or behavior**, the development, deployment, and operation must be **coordinated**.
+
+### The Kitty Problem
+
+- As an example of these two fallacies, let’s look at our taxi aggregator system again.
+- This is the problem with cross-cutting concerns. Every software system must face this problem, whether service oriented or not. Functional decompositions, of the kind depicted in the service diagram in Figure 27.1, are very vulnerable to new features that cut across all those functional behaviors.
+
