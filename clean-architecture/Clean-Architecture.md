@@ -37,7 +37,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - __architecture__: software system should be easy to change.
 - both business managers and developers would tend more to advocate function over architecture, but it is the __wrong__ attitude.
 - Business managers and developers fail to separate those features that __urgent__ but __not important__, from those features that truly are __urgent and important__. This failure leads to ignoring the important architecture of the system in favor of the unimportant features of the system.
-- If __architecture__ comes last, then the system will become ever __more costly__ to develop, and eventually __change__ wil become practically impossible for part or for all of the system. If that is allowed to happen, it means the software development team did not fight hard enough for what they knew was necessery.
+- If __architecture__ comes last, then the system will become ever __more costly__ to develop, and eventually __change__ wil become practically impossible for part or for all of the system. If that is allowed to happen, it means the software development team did not fight hard enough for what they knew was necessary.
 
 ## Chapter 3. Paradigm overview
 
@@ -45,7 +45,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - shows that the use of __unrestrained__ jumps (`goto` statements) is __harmful__ to program structure.
     - replaced those jumps with more familiar `if/then/else` and `do/while/until` constructs.
     - _Structured programming imposes discipline on direct transfer of control_.
-- __object orionted programming__:
+- __object oriented programming__:
     - engineers noticed that the function call stack frame in the ALGOL language could be moved to a heap, thereby allowing local variables declared by a function to exist long after the function returned.
     - the function became a constructor for a class, the local variables became instance variables, and the nested functions became methods. This led inevitably to the discovery of polymorphism through the disciplined use of function pointers.
     - _Object-oriented programming imposes discipline on indirect transfer of control_.
@@ -54,7 +54,7 @@ notes taken from reading the _Clean Architecture_ book by Robert C.Martin.
     - a foundational notion of lambda calculus is immutability—that is, the notion that the values of symbols do not change => __no assignment statement__.
     - most functional languages do, in fact, have some means to alter the value of a variable, but only under very strict discipline.
     - _Functional programming imposes discipline upon assignment_.
-- each of these paradigms __removes__ capabilities from the programmer, none of them adds new ones. Each imposes some kind of extra discipline that is negative in its intent. The paradigms tell us __what not to do__, more than they tell us __what to do__. They removed `goto` statements, function pointers, and assignement.
+- each of these paradigms __removes__ capabilities from the programmer, none of them adds new ones. Each imposes some kind of extra discipline that is negative in its intent. The paradigms tell us __what not to do__, more than they tell us __what to do__. They removed `goto` statements, function pointers, and assignments.
 
 ## Chapter 4. Structured Programming
 
@@ -672,7 +672,37 @@ What is the best mode to use ❓
 - THe same is true of the database. Since we have chosen to treat it as a plugin, we can replace it with any of the various `SQL` databases, or a `NOSQL` or a file system-based database, or any other kind of database.
 <p align="center"><img src="assets/plugging-in-to-business-rules.png" width="300px" height="auto"></p>
 
-## Chapter 18 TODO: Complete this chapter
+## Chapter 18 Boundary Anatomy
+
+- The architecture of a system is defined by a set of software components and the boundaries that separate them. Those boundaries come in many different forms. In this chapter we’ll look at some of the most common.
+
+### Boundary Crossing
+
+- At runtime, a boundary crossing is nothing more than a function on one side of the boundary calling a function on the other side and passing along some data. The trick to creating an appropriate boundary crossing is to **manage the source code dependencies**.
+- The simplest possible boundary crossing is a function call from a low-level client to a higher-level service. Both the runtime dependency and the compile-time dependency point in the same direction, toward the higher-level component.
+<p align="center"><img src="assets/low-high-level-boundary-crossing.png" width="400px" height="auto"></p>
+
+- When a high-level client needs to invoke a lower-level service, dynamic polymorphism is used to invert the dependency against the flow of control.
+<p align="center"><img src="assets/boundary-crossing-against-control-flow.png" width="400px" height="auto"></p>
+
+### Deployment Components
+
+- The simplest physical representation of an architectural boundary is a **dynamically linked library** like a .Net DLL, a Java jar file, a Ruby Gem, or a UNIX shared library.
+
+### Threads
+
+- Both monoliths and deployment components can make use of threads. Threads are **not architectural boundaries** or units of deployment, but rather a way to organize the schedule and order of execution. They may be wholly contained within a component, or spread across many components.
+
+### Local Processes
+
+- A much stronger physical architectural boundary is the local process.
+- Local processes run in a separate address spaces but communicate with each other using sockets, or some other kind of operating system communications facility such as mailboxes or message queues.
+- The segregation strategy between local processes is the same as for monoliths and binary components. Source code dependencies point in the same direction across the boundary, and always toward the higher-level component.
+
+### Services
+
+- The strongest boundary is a service. The services assume that all communications take place over the network.
+- Otherwise, the same rules apply to services as apply to local processes. Lower-level services should “plug in” to higher-level services. The source code of higher-level services must not contain any specific physical knowledge (e.g., a URI) of any lower-level service.
 
 ## Chapter 19: Policy and Level
 
@@ -871,5 +901,113 @@ What is the best mode to use ❓
 ### The Kitty Problem
 
 - As an example of these two fallacies, let’s look at our taxi aggregator system again.
-- This is the problem with cross-cutting concerns. Every software system must face this problem, whether service oriented or not. Functional decompositions, of the kind depicted in the service diagram in Figure 27.1, are very vulnerable to new features that cut across all those functional behaviors.
+<p align="center"><img src="assets/taxi-service-arch.png" width="400px" height="auto"></p>
 
+- Company decided to add a new feature so a user can order kittens to be delivered to their homes or to their places of business.
+- Such feature will require all services to be coordinated and to change.
+- :arrow_forward: This is the problem with cross-cutting concerns. Every software system must face this problem, whether service oriented or not. Functional decompositions, of the kind depicted in the service diagram above, are **very vulnerable to new features** that cut across all those functional behaviors.
+
+### Objects to the Rescue
+
+- How would we have solved this problem in a component-based architecture? 
+    - Careful consideration of the **SOLID** design principles would have prompted us to create a set of classes that could be **polymorphically extended** to handle new features.
+
+<p align="center"><img src="assets/taxi-object-oriented-arch.png" width="400px" height="auto"></p>
+
+- Much of the logic of the original services is preserved within the base classes of the object model.
+    - However, that portion of the logic that was specific to rides has been extracted into a `Rides` component.
+    - The new feature for kittens has been placed into a `Kittens` component. 
+    - These two components **override** the abstract base classes in the original components using a pattern such as **Template Method** or **Strategy**.
+- Note also that the classes that implement those features are created by **factories** under the control of the UI.
+
+### Component-Based Services
+
+- Can we do that for services? And the answer is, Yes! 
+- The services can be designed using the SOLID principle, but each has its own internal component design, allowing new features to be added as new derivative classes. Those derivative classes live within their own components.
+<p align="center"><img src="assets/component-based-taxi-arch.png" width="400px" height="auto"></p>
+
+### Cross-Cutting Concerns
+
+- To deal with the **cross-cutting concerns** that all significant systems face, services must be designed with **internal component** architectures that follow the **Dependency Rule**. Those services **do not define the architectural boundaries** of the system; instead, the **components** within the services do.
+<p align="center"><img src="assets/cross-cutting-concerns.png" width="400px" height="auto"></p>
+
+- :arrow_forward: As useful as services are to the scalability and develop-ability of a system, they are not, in and of themselves, **architecturally** significant elements. The architecture of a system is defined by the **boundaries** drawn within that system, and by the **dependencies** that cross those boundaries. That architecture is not defined by the physical mechanisms by which elements communicate and execute.
+
+## Chapter 28: The Test Boundary
+
+- tests are part of the system, and they participate in the architecture just like every other part of the system does.
+
+### Tests as System Components
+
+- Tests, by their very nature, follow the Dependency Rule; they are very detailed and concrete; and they always depend inward toward the code being tested. 
+- In fact, you can think of the tests as the outermost circle in the architecture. Nothing within the system depends on the tests, and the tests always depend inward on the components of the system.
+- Tests are the most **isolated** system component. They are not necessary for system operation. No user depends on them. Their role is to support **development**, not **operation**.
+
+### Design for Testability
+
+- The extreme isolation of the tests, combined with the fact that they are not usually deployed, often causes developers to think that tests fall outside of the design of the system. :warning: This is a catastrophic point of view.
+- *Fragile Tests Problem* occur where a simple change would break hundreds or thousands of tests.
+- :arrow_forward: The solution is to design for testability. The first rule of software design— whether for testability or for any other reason—is always the same: *Don’t depend on volatile things*.
+
+### The Testing API
+
+- The way to accomplish this goal is to create a specific API that the tests can use to verify all the business rules.
+- The purpose of the testing API is to decouple the tests from the application. This decoupling encompasses more than just detaching the tests from the UI: The goal is to decouple the **structure of the tests** from the **structure of the application**.
+- :arrow _forward: Tests are not outside the system; rather, they are parts of the system that must be well designed if they are to provide the desired benefits of stability and regression. Tests that are not designed as part of the system tend to be fragile and difficult to maintain. Such tests often wind up on the maintenance room floor—discarded because they are too difficult to maintain.
+
+## Chapter 29: Clean Embedded Architecture
+
+- According to the author's definition: *Firmware does not mean code lives in ROM. It’s not firmware because of where it is stored; rather, it is firmware because of what it depends on and how hard it is to change as hardware evolves*.
+-  For engineers and programmers, the message is clear: Stop writing so much firmware and give your code a chance at a long useful life. Of course, demanding it won’t make it so. Let’s look at how we can keep embedded software architecture clean to give the software a fighting chance of having a long and useful life.
+
+### App-titude Test
+
+- Getting an app to work is what I call the **App-titude** test for a programmer. Programmers, embedded or not, who just concern themselves with getting their app to work are doing their products and employers a disservice. There is much more to programming than just getting an app to work.
+    - “First make it work.” You are out of business if it doesn’t work.
+    - “Then make it right.” Refactor the code so that you and others can understand it and evolve it as needs change or are better understood.
+    - “Then make it fast.” Refactor the code for “needed” performance.
+
+### The Target-Hardware Bottleneck
+
+- One of the special embedded problems is the **target-hardware bottleneck**. 
+- When embedded code is structured without applying clean architecture principles and practices, you will often face the scenario in which you can test your code only on the target. If the target is the only place where testing is possible, the target-hardware bottleneck will slow you down.
+
+### A Clean Embedded Architecture Is a Testable Embedded Architecture
+
+- Layering comes in many flavors. Let’s start with three layers:
+- due to technology advances and Moore’s law, the hardware will change. Parts become obsolete, and new parts use less power or provide better performance or are cheaper. Whatever the reason, as an embedded engineer, I don’t want to have a bigger job than is necessary when the inevitable hardware change finally happens.
+<p align="center"><img src="assets/three-layers.png" width="400px" height="auto"></p>
+
+- Software and firmware intermingling is an anti-pattern. Code exhibiting this anti-pattern will resist changes. In addition, changes will be dangerous, often leading to unintended consequences.
+<p align="center"><img src="assets/mix-soft-firm-anti-pattern.png" width="400px" height="auto"></p>
+
+- The line between software and firmware is a bit fuzzier than the line between code and hardware:
+<p align="center"><img src="assets/hardware-is-a-detail.png" width="400px" height="auto"></p>
+
+- One of your jobs as an embedded software developer is to firm up that line. The name of the boundary between the software and the firmware is the **hardware abstraction layer** (HAL). This is not a new idea: It has been in PCs since the days before Windows.
+- The HAL exists for the software that sits on top of it, and its API should be tailored to that software’s needs.
+
+### Don’t Reveal Hardware Details to the User of the HAL
+
+#### The Processor Is a Detail
+
+- When your embedded application uses a specialized tool chain, it will often provide header files to help you.
+- These compilers often take liberties with the C language, adding new keywords to access their processor features. The code will **look like C**, but it is **no longer C**, because we lost **portability**.
+- :light: A clean embedded architecture would use these device access registers directly in very few places and confine them totally to the **firmware**.
+- If you use a micro-controller like this, your firmware could isolate these low-level functions with some form of a **processor abstraction layer (PAL)**. Firmware above the PAL could be tested off-target, making it a little less firm.
+
+#### The Operating System Is a Detail
+
+- To give your embedded code a good chance at a long life, you have to treat the operating system as a detail and protect against OS dependencies.
+- A clean embedded architecture isolates software from the OS, through an **operating system abstraction layer** (OSAL). In some cases, implementing this layer might be as simple as changing the name of a function. In other cases, it might involve wrapping several functions together.
+<p align="center"><img src="assets/os-abstraction-layer.png" width="400px" height="auto"></p>
+
+#### Programming to Interfaces and Substitutability
+
+- In addition to adding a HAL and potentially an OSAL inside each of the major layers (software, OS, firmware, and hardware), you can—and should— apply the principles described throughout this book. These principles encourage separation of concerns, programming to interfaces, and substitutability.
+
+### DRY Conditional Compilation Directives
+
+- One use of substitutability that is often overlooked relates to how embedded C and C++ programs handle different targets or OSs.
+- There is a tendency to use **conditional compilation** to turn on and off segments of code.
+- I see `#ifdef BOARD_V2` once, it’s not really a problem. Six thousand times is an extreme problem. :happy:
