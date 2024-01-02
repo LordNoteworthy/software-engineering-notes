@@ -38,7 +38,8 @@ Widget aWidget;
 if (hasAcceptableQuality(aWidget)) ...
 ```
 
-- The parameter `w` is passed to `hasAcceptableQuality` by **value**, so in the call above, `aWidget` is copied into `w`. The copying is done by `Widget’s` copy constructor. ➡️ Pass-by-value means “call the copy constructor.”.
+- The parameter `w` is passed to `hasAcceptableQuality` by **value**, so in the call above, `aWidget` is copied into `w`. The copying is done by `Widget’s` copy constructor.
+  -  ➡️ Pass-by-value means “call the copy constructor.”.
 
 ## Chapter 1: Accustoming Yourself to C++
 
@@ -92,3 +93,36 @@ inline void callWithMax(const T& a, const T& b) {
 👍 Things to Remember:
 - For simple constants, prefer const objects or enums to `#defines`.
 - For function-like macros, prefer inline functions to `#defines`.
+
+### Item 3: : Use const whenever possible.
+
+- Some programmers list const before the type. Others list it after the type but before the **asterisk**. There is no difference in meaning, so the following functions take the same parameter type:
+```c
+void f1(const Widget *pw); // f1 takes a pointer to a constant Widget object
+void f2(Widget const *pw); // so does f2
+```
+- STL iterators are modeled on **pointers**, so an iterator acts much like a _T* pointer_.
+- If you want an iterator that points to something that can’t be modified (i.e., the STL analogue of a const T* pointer), you want a *const_iterator*:
+```c
+...std::vector<int> vec;
+const std::vector<int>::iterator iter = // iter acts like a T* const
+vec.begin();
+*iter = 10; // OK, changes what iter points to
+++iter; // error! iter is const
+std::vector<int>::const_iterator cIter = // cIter acts like a const T*
+vec.begin();
+*cIter = 10; // error! *cIter is const
+++cIter; // fine, changes cIter
+```
+- 😲 Many people overlook the fact that member functions differing only in their **constness** can be **overloaded**, but this is an important feature of C++.
+- It’s never **legal** to modify the return value of a function that returns a **built-in** type. Even if it were legal, the fact that C++ returns objects by value would mean that a copy of `tb.text[0]` would be modified, not `tb.text[0]` itself, and that’s not the behavior you want.
+-  C++’s definition of **member function constness** in a member function is `const` if and only if it doesn’t modify any of the object’s data members (excluding those that are static).
+   - :facepalm: Unfortunately, many member functions that don’t act very `const` pass this test !
+   - Example: function returns a reference to the object’s internal data.
+   - ▶️ a `const` member function might modify some of the bits in the object on which it’s invoked, but only in ways that clients cannot detect.
+👍 Things to Remember
+   - Declaring something `const` helps compilers detect usage errors. `const` can be applied to objects at any scope, to function parameters and return types, and to member functions as a whole.
+   - Compilers enforce **bitwise constness**, but you should program using **logical constness**.
+   - When `const` and `non-const` member functions have essentially identical implementations, code duplication can be avoided by having the non-const version call the const version.
+
+### Item 4: Make sure that objects are initialized before they’re used.
