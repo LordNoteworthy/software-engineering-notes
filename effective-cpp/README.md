@@ -90,7 +90,7 @@ inline void callWithMax(const T& a, const T& b) {
 }
 ```
 
-👍 Things to Remember:
+📆 Things to Remember:
 - For simple constants, prefer const objects or enums to `#defines`.
 - For function-like macros, prefer inline functions to `#defines`.
 
@@ -120,7 +120,7 @@ vec.begin();
    - :facepalm: Unfortunately, many member functions that don’t act very `const` pass this test !
    - Example: function returns a reference to the object’s internal data.
    - ▶️ a `const` member function might modify some of the bits in the object on which it’s invoked, but only in ways that clients cannot detect.
-👍 Things to Remember
+📆 Things to Remember
    - Declaring something `const` helps compilers detect usage errors. `const` can be applied to objects at any scope, to function parameters and return types, and to member functions as a whole.
    - Compilers enforce **bitwise constness**, but you should program using **logical constness**.
    - When `const` and `non-const` member functions have essentially identical implementations, code duplication can be avoided by having the non-const version call the const version.
@@ -140,7 +140,7 @@ ABEntry::ABEntry(const std::string& name, const std::string& address, const std:
 sometimes much more efficient — than a call to the **default constructor** followed by a call to the **copy assignment operator**.
 - **Base classes** are always initialized before **derived** classes, and within a class, **data members** are initialized in the order in which they are **declared** ( true even if they are listed in a different order on the member initialization list 😲!)
 - ⚠️the relative order of initialization of **non-local static objects** defined in different translation units is **undefined**.
-👍 Things to Remember:
+📆 Things to Remember:
 - Manually initialize objects of built-in type, because C++ only sometimes initializes them itself.
 - In a constructor, prefer use of the **member initialization** list to assignment inside the body of the constructor. List data members in the initialization list in the **same order** they’re declared in the class.
 - Avoid initialization order problems across translation units by replacing non-local static objects with local static objects.
@@ -148,3 +148,25 @@ sometimes much more efficient — than a call to the **default constructor** fol
 ## Chapter 2: Constructors, Destructors, and Assignment Operators
 
 ### Item 5: Know what functions C++ silently writes and calls.
+
+- When is an empty class not an empty class? When C++ gets through with it. If you don’t declare them yourself, compilers will declare their own versions of a copy constructor, a copy assignment operator, and a destructor. Furthermore, if you declare no constructors at all, compilers will also declare a default constructor for you.
+-  As a result, if you write `class Empty{};`, it’s essentially the same as if you’d written this:
+```c
+class Empty {
+public:
+  Empty() { ... } // default constructor
+  Empty(const Empty& rhs) { ... } // copy constructor
+  ~Empty() { ... } // destructor — see below // for whether it’s virtual
+  Empty& operator=(const Empty& rhs) { ... } // copy assignment operator
+};
+```
+- ⚠️ If you’ve carefully engineered a class to require constructor arguments, you don’t have to worry about compilers **overriding** your decision by blithely adding a constructor that takes no arguments.
+- Compilers will refuse to generate an implicit operator= for your class if the resulting code has a reasonable chance of making sense, for example:
+  - classes containing **references** members
+  - classes containing **const** members
+  - **derived** classes that inherit from base classes declaring the **copy** assignment operator **private**.
+📆 Things to Remember
+- Compilers may implicitly generate a class’s **default** constructor, **copy** constructor, **copy assignment** operator, and **destructor**.
+
+### Item 6: Explicitly disallow the use of compiler-generated functions you do not want.
+
