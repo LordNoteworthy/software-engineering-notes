@@ -126,3 +126,25 @@ vec.begin();
    - When `const` and `non-const` member functions have essentially identical implementations, code duplication can be avoided by having the non-const version call the const version.
 
 ### Item 4: Make sure that objects are initialized before they’re used.
+
+- There are rules that describe when object initialization is guaranteed to take place and when it isn’t.
+- Unfortunately, the rules are **complicated** — too complicated to be worth memorizing.
+- ⚠️ it’s important not to confuse **assignment** with **initialization**.
+```c
+ABEntry::ABEntry(const std::string& name, const std::string& address, const std::list<PhoneNumber>& phones)
+  // these are now all initializations
+  : theName(name), theAddress(address), thePhones(phones), numTimesConsulted(0)
+{} // the ctor body is now empty
+```
+- In this case, for example `theName` is copy-constructed from `name`. For most types, a single call to a **copy constructor** is more efficient —
+sometimes much more efficient — than a call to the **default constructor** followed by a call to the **copy assignment operator**.
+- **Base classes** are always initialized before **derived** classes, and within a class, **data members** are initialized in the order in which they are **declared** ( true even if they are listed in a different order on the member initialization list 😲!)
+- ⚠️the relative order of initialization of **non-local static objects** defined in different translation units is **undefined**.
+👍 Things to Remember:
+- Manually initialize objects of built-in type, because C++ only sometimes initializes them itself.
+- In a constructor, prefer use of the **member initialization** list to assignment inside the body of the constructor. List data members in the initialization list in the **same order** they’re declared in the class.
+- Avoid initialization order problems across translation units by replacing non-local static objects with local static objects.
+
+## Chapter 2: Constructors, Destructors, and Assignment Operators
+
+### Item 5: Know what functions C++ silently writes and calls.
