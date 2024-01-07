@@ -7,7 +7,7 @@ notes taken from reading the *Effective C++ Third Edition* by Scott Meyers.
 - This book is not an introduction to C++ or a complete reference for it, but a guidance on how to develop better designs,
 - Constructors declared **explicit** are usually preferable to non-explicit ones, because they prevent compilers from performing unexpected (often unintended) **type conversions**.
 
-```c
+```cpp
 class C {
     public:
         explicit C(int x); // not a default constructor
@@ -17,7 +17,7 @@ class C {
 - Read carefully when you see what appears to be an assignment, because the “=” syntax can also be used to call the copy constructor:
 `Widget w3 = w2; // invoke copy constructor!`.
 
-```c
+```cpp
 class Widget {
 public:
     Widget(); // default constructor
@@ -32,7 +32,7 @@ w1 = w2; // invoke copy assignment operator
 
 - If a new object is being defined (such as w3 in the statement above), a constructor **has to be called**; it can’t be an assignment. - If no new object is being defined (such as in the `w1 = w2` statement above), no constructor can be involved, so it’s an **assignment**.
 - For example, consider this:
-```c
+```cpp
 bool hasAcceptableQuality(Widget w);
 Widget aWidget;
 if (hasAcceptableQuality(aWidget)) ...
@@ -51,7 +51,7 @@ if (hasAcceptableQuality(aWidget)) ...
 
 ### Item 2: Prefer consts, enums, and inlines to #defines.
 
-```c
+```cpp
 #define authorName "Scott Meyers"; // bad
 const char * const authorName = "Scott Meyers"; // better
 const std::string authorName("Scott Meyers"); // best
@@ -60,7 +60,7 @@ const std::string authorName("Scott Meyers"); // best
 - C++ requires that you provide a **definition** for anything you use, but **class-specific constants** that are static and of integral type (e.g., integers, chars, bools) are an exception.
 - To limit the scope of a constant to a **class**, you must make it a member, and to ensure there’s at most one **copy** of the constant, you must make it a **static** member.
 
-```c
+```cpp
 class GamePlayer {
 private:
     // As long as you don’t take their address,
@@ -78,12 +78,12 @@ const int GamePlayer::NumTurns; // definition of NumTurns;
   - ▶️ `#defines `can't be used for class-specific constants, they also can’t be used to provide any kind of **encapsulation**.
 - 🌟 If you don’t want to let people get a pointer or reference to one of your integral constants, an **enum** is a good way to enforce that constraint.
 - Macros like this have so many drawbacks, just thinking about them is painful:
-```c
+```cpp
 #define CALL_WITH_MAX(a, b) f((a) > (b) ? (a) : (b))
 ```
 - ⚠️ Whenever you write this kind of macro, you have to remember to **parenthesize** all the arguments in the macro body. Otherwise you can run into trouble when somebody calls the macro with an **expression**.
 - You can get all the efficiency of a macro plus all the predictable behavior and type safety of a regular function by using a **template** for an **inline** function.
-```c
+```cpp
 - template<typename T> // because we don’t know what T is, we pass by reference-to const
 inline void callWithMax(const T& a, const T& b) {
     f(a > b ? a : b);
@@ -97,13 +97,13 @@ inline void callWithMax(const T& a, const T& b) {
 ### Item 3: : Use const whenever possible.
 
 - Some programmers list const before the type. Others list it after the type but before the **asterisk**. There is no difference in meaning, so the following functions take the same parameter type:
-```c
+```cpp
 void f1(const Widget *pw); // f1 takes a pointer to a constant Widget object
 void f2(Widget const *pw); // so does f2
 ```
 - STL iterators are modeled on **pointers**, so an iterator acts much like a _T* pointer_.
 - If you want an iterator that points to something that can’t be modified (i.e., the STL analogue of a const T* pointer), you want a *const_iterator*:
-```c
+```cpp
 ...std::vector<int> vec;
 const std::vector<int>::iterator iter = // iter acts like a T* const
 vec.begin();
@@ -120,6 +120,7 @@ vec.begin();
    - :facepalm: Unfortunately, many member functions that don’t act very `const` pass this test !
    - Example: function returns a reference to the object’s internal data.
    - ▶️ a `const` member function might modify some of the bits in the object on which it’s invoked, but only in ways that clients cannot detect.
+
 📆 Things to Remember
    - Declaring something `const` helps compilers detect usage errors. `const` can be applied to objects at any scope, to function parameters and return types, and to member functions as a whole.
    - Compilers enforce **bitwise constness**, but you should program using **logical constness**.
@@ -130,7 +131,7 @@ vec.begin();
 - There are rules that describe when object initialization is guaranteed to take place and when it isn’t.
 - Unfortunately, the rules are **complicated** — too complicated to be worth memorizing.
 - ⚠️ it’s important not to confuse **assignment** with **initialization**.
-```c
+```cpp
 ABEntry::ABEntry(const std::string& name, const std::string& address, const std::list<PhoneNumber>& phones)
   // these are now all initializations
   : theName(name), theAddress(address), thePhones(phones), numTimesConsulted(0)
@@ -140,6 +141,7 @@ ABEntry::ABEntry(const std::string& name, const std::string& address, const std:
 sometimes much more efficient — than a call to the **default constructor** followed by a call to the **copy assignment operator**.
 - **Base classes** are always initialized before **derived** classes, and within a class, **data members** are initialized in the order in which they are **declared** ( true even if they are listed in a different order on the member initialization list 😲!)
 - ⚠️the relative order of initialization of **non-local static objects** defined in different translation units is **undefined**.
+
 📆 Things to Remember:
 - Manually initialize objects of built-in type, because C++ only sometimes initializes them itself.
 - In a constructor, prefer use of the **member initialization** list to assignment inside the body of the constructor. List data members in the initialization list in the **same order** they’re declared in the class.
@@ -151,7 +153,7 @@ sometimes much more efficient — than a call to the **default constructor** fol
 
 - When is an empty class not an empty class? When C++ gets through with it. If you don’t declare them yourself, compilers will declare their own versions of a copy constructor, a copy assignment operator, and a destructor. Furthermore, if you declare no constructors at all, compilers will also declare a default constructor for you.
 -  As a result, if you write `class Empty{};`, it’s essentially the same as if you’d written this:
-```c
+```cpp
 class Empty {
 public:
   Empty() { ... } // default constructor
@@ -165,8 +167,45 @@ public:
   - classes containing **references** members
   - classes containing **const** members
   - **derived** classes that inherit from base classes declaring the **copy** assignment operator **private**.
+
 📆 Things to Remember
 - Compilers may implicitly generate a class’s **default** constructor, **copy** constructor, **copy assignment** operator, and **destructor**.
 
 ### Item 6: Explicitly disallow the use of compiler-generated functions you do not want.
 
+- By declaring a member function explicitly, you prevent compilers from generating their own version, and by making the function private, you keep people from calling it
+```cpp
+class HomeForSale {
+public:
+  ...
+private:
+  // declarations only
+  HomeForSale(const HomeForSale&);
+  HomeForSale& operator=(const HomeForSale&);
+};
+```
+- It’s possible to move the **link-time** error up to **compile time** (:+1: always a good thing — earlier error detection is better than later) by declaring the copy constructor and copy assignment operator **private** not in `HomeForSale` itself, but in a **base** class specifically designed to prevent copying.
+- The base class is simplicity itself:
+```cpp
+class Uncopyable {
+protected:
+// allow construction and destruction of derived objects...
+  Uncopyable() {}
+  ~Uncopyable() {}
+private: // ...but prevent copying
+  Uncopyable(const Uncopyable&);
+  Uncopyable& operator=(const Uncopyable&);
+};
+```
+- To keep `HomeForSale` objects from being copied, all we have to do now is inherit from `Uncopyable`:
+```cpp
+class HomeForSale: private Uncopyable {
+// class no longer declares copy ctor or copy assign. operator
+...
+};
+```
+
+📆 Things to Remember
+- To disallow functionality automatically provided by compilers, declare the corresponding member functions **private** and give no implementations. Using a base class like `Uncopyable` is one way to do this.
+
+## Item 7: Declare destructors virtual in polymorphic base classes.
