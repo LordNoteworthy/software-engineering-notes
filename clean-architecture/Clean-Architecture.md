@@ -853,7 +853,7 @@ What is the best mode to use ❓
 - An even simpler boundary is the **Facade** pattern, illustrated below. In this case, even the **dependency inversion** is **sacrificed**. The boundary is simply defined by the Facade class, which lists all the services as methods, and deploys the service calls to classes that the client is not supposed to access.
 <p align="center"><img src="assets/facade-pattern.png" width="300px" height="auto"></p>
 
-### Chapter 25: Layers and Boundaries
+## Chapter 25: Layers and Boundaries
 
 - It is easy to think of systems as being composed of three components: UI, business rules, and database.
 - For some simple systems, this is sufficient. For most systems, though, the number of components is larger than that.
@@ -909,20 +909,20 @@ What is the best mode to use ❓
 
 ### Objects to the Rescue
 
-- How would we have solved this problem in a component-based architecture? 
+- How would we have solved this problem in a component-based architecture?
     - Careful consideration of the **SOLID** design principles would have prompted us to create a set of classes that could be **polymorphically extended** to handle new features.
 
 <p align="center"><img src="assets/taxi-object-oriented-arch.png" width="400px" height="auto"></p>
 
 - Much of the logic of the original services is preserved within the base classes of the object model.
     - However, that portion of the logic that was specific to rides has been extracted into a `Rides` component.
-    - The new feature for kittens has been placed into a `Kittens` component. 
+    - The new feature for kittens has been placed into a `Kittens` component.
     - These two components **override** the abstract base classes in the original components using a pattern such as **Template Method** or **Strategy**.
 - Note also that the classes that implement those features are created by **factories** under the control of the UI.
 
 ### Component-Based Services
 
-- Can we do that for services? And the answer is, Yes! 
+- Can we do that for services? And the answer is, Yes!
 - The services can be designed using the SOLID principle, but each has its own internal component design, allowing new features to be added as new derivative classes. Those derivative classes live within their own components.
 <p align="center"><img src="assets/component-based-taxi-arch.png" width="400px" height="auto"></p>
 
@@ -939,7 +939,7 @@ What is the best mode to use ❓
 
 ### Tests as System Components
 
-- Tests, by their very nature, follow the Dependency Rule; they are very detailed and concrete; and they always depend inward toward the code being tested. 
+- Tests, by their very nature, follow the Dependency Rule; they are very detailed and concrete; and they always depend inward toward the code being tested.
 - In fact, you can think of the tests as the outermost circle in the architecture. Nothing within the system depends on the tests, and the tests always depend inward on the components of the system.
 - Tests are the most **isolated** system component. They are not necessary for system operation. No user depends on them. Their role is to support **development**, not **operation**.
 
@@ -969,7 +969,7 @@ What is the best mode to use ❓
 
 ### The Target-Hardware Bottleneck
 
-- One of the special embedded problems is the **target-hardware bottleneck**. 
+- One of the special embedded problems is the **target-hardware bottleneck**.
 - When embedded code is structured without applying clean architecture principles and practices, you will often face the scenario in which you can test your code only on the target. If the target is the only place where testing is possible, the target-hardware bottleneck will slow you down.
 
 ### A Clean Embedded Architecture Is a Testable Embedded Architecture
@@ -1011,3 +1011,129 @@ What is the best mode to use ❓
 - One use of substitutability that is often overlooked relates to how embedded C and C++ programs handle different targets or OSs.
 - There is a tendency to use **conditional compilation** to turn on and off segments of code.
 - I see `#ifdef BOARD_V2` once, it’s not really a problem. Six thousand times is an extreme problem. :happy:
+
+## Chapter 30: The Database Is a Detail
+
+- From an architectural point of view, the database is a **non-entity**, it is a detail that does not rise to the level of an architectural element.
+- The database is a utility that provides access to the data. From the architecture’s point of view, that utility is **irrelevant** because it’s a low-level detail —a mechanism. And a good architect does not allow low-level mechanisms to pollute the system architecture.
+
+### Relational Databases
+
+- no matter how brilliant, useful, and mathematically sound a technology (such as relational DBs) it is, it is still just a **technology**. And that means it’s a **detail**.
+- :man_shrugging: Many data access frameworks (ORMs) allow database rows and tables to be passed around the system as **objects**. Allowing this is an **architectural error**. It couples the use cases, business rules, and in some cases even the UI to the relational structure of the data.
+
+### Why Are Database Systems So Prevalent?
+
+- What accounts for the preeminence of Oracle, MySQL, and SQL Server? In a word: **disks**.
+- The rotating magnetic disk was the mainstay of data storage for five decades.
+
+### What If There Were No Disk?
+
+- As prevalent as disks once were, they are now a dying breed 🫨 Soon they will have gone the way of tape drives, floppy drives, and CDs. They are being replaced by **RAM**.
+- When all the disks are gone, and all your data is stored in RAM, how will you organize that data? ▶️ You’ll organize it into **linked lists, trees, hash tables, stacks, queues**, or any of the other myriad data structures, and you’ll access it using pointers or references— because that’s what programmers do.
+
+### But What about Performance?
+
+- When it comes to data storage, performance is a concern that can be entirely **encapsulated** and **separated** from the **business** rules.
+- It has nothing whatsoever to do with the overall architecture of our systems.
+
+### Conclusion:
+
+- The organizational structure of data, the data model, is architecturally significant. The technologies and systems that move data on and off a rotating magnetic surface are not.
+- Relational database systems that force the data to be organized into tables and accessed with SQL have much more to do with the latter than with the former.
+- ▶️ The data is significant. The database is a detail.
+
+## Chapter 31: The Web Is a Detail
+
+- As architects of the apps, we should keep the **UI** and **business rules** **isolated** from each other, because there are always marketing geniuses 😄 out there just waiting to pounce on the next little bit of coupling you create.
+- The GUI is a detail. The web is a GUI. ▶️ the web is a detail. And, as an architect, you want to put details like that behind boundaries that keep them separate from your core business logic.
+- The interaction between the app and the GUI is *chatty* in ways that are quite specific to the kind of GUI you have. The dance between a browser and a web application is different from the dance between a desktop GUI and its application. Trying to abstract out that dance, the way **devices** are abstracted out of *UNIX*, seems unlikely to be possible.
+- But another boundary between the UI and the app can be abstracted. The business logic can be thought of as a suite of use cases, each of which performs some function on behalf of a user. Each use case can be described based on the input data, the processing preformed, and the output data.
+
+### Conclusion
+
+- This kind of abstraction is **not easy**, and it will likely take several iterations to get just right. But it is possible. And since the world is full of marketing geniuses, it’s not hard to make the case that it’s often very necessary.
+
+## Chapter 32: Frameworks Are Details
+
+- Frameworks are not architectures — though some try to be.
+
+### Framework Authors
+
+- Framework authors know their own problems, and the problems of their coworkers and friends. And they write their frameworks to solve those problems — not yours.
+
+### Asymmetric Marriage
+
+- The relationship between you and the framework author is extraordinarily asymmetric. You must make a huge **commitment** to the **framework**, but the framework author makes **no commitment to you** whatsoever.
+- The author urges you to **couple** your application to the framework as **tightly** as possible.
+- 💯 Nothing feels more **validating** to a framework author than a bunch of users willing to inextricably derive from the author’s base classes.
+
+### The Risks
+
+- The architecture of the framework is often not very clean. Frameworks tend to **violate** the **Dependency Rule**.
+- As your product matures, it may outgrow the facilities of the framework. You’ll find the framework fighting you more and more as time passes.
+- The framework may evolve in a direction that you don’t find helpful. You may be stuck upgrading to new versions that don’t help you.
+- A new and better framework may come along that you wish you could switch to 🤷‍♂️.
+
+### The Solution
+
+- You can use the framework — just don’t couple to it. Keep it at arm’s length. Treat the framework as a detail that belongs in one of the outer circles of the architecture. Don’t let it into the **inner circles**.
+
+### Conclusion
+
+- When faced with a framework, try not to marry it **right away**. See if there aren’t ways to date it for a while before you take the plunge.
+- Keep the framework behind an architectural boundary if at all possible, for as long as possible. Perhaps you can find a way to get the milk without buying the 🐮.
+
+## Chapter 33 : Case Study: Video Sales
+
+- The architecture diagram below includes two dimensions of separation. The first is the **separation of actors** based on the **SIP** the second is the Dependency Rule.
+<p align="center"><img src="assets/video-sales-uml.png" width="400px" height="auto"></p>
+
+- The goal of both is to **separate components** that change for **different reasons**, and at **different rates**. The different reasons correspond to the **actors**; the different rates correspond to the different levels of **policy**.
+- Once you have structured the code this way, you can mix and match how you want to actually deploy the system. You can group the components into deployable deliverables in any way that makes sense, and easily change that grouping when conditions change.
+<p align="center"><img src="assets/video-sales-arch.png" width="400px" height="auto"></p>
+
+## Chapter 34: The Missing Chapter
+
+### Package by Layer
+
+The first, and perhaps simplest, design approach is the traditional horizontal layered architecture, where we separate our code based on what it does from a technical perspective.
+In this typical layered architecture, we have one layer for the web code, one layer for our “business logic,” and one layer for persistence. <p align="center"><img src="assets/package-by-layer.png" width="400px" height="auto"></p>
+- 👎 Problems:
+    - Once your software grows in scale and complexity, you will quickly find that having three large buckets of code isn’t sufficient, and you will need to think about modularizing further.
+    - A layered architecture doesn’t **scream** anything about the **business domain**.
+
+### Package by Feature
+
+- This is a vertical slicing, based on related features, domain concepts, or aggregate roots (to use domain-driven design terminology). In the typical implementations that I’ve seen, all of the types are placed into a single Java package, which is named to reflect the concept that is being grouped.
+- Same interfaces and classes as before, but they are all placed into a single Java package rather than being split among three packages. <p align="center"><img src="assets/package-by-feature.png" width="400px" height="auto"></p>
+- This is a very simple refactoring from the “package by layer” style, but the top-level organization of the code now screams something about the business domain.
+
+### Ports and Adapters
+
+- Approaches such as “ports and adapters,” the “hexagonal architecture,” “boundaries, controllers, entities,” and so on
+aim to create architectures where business/domain-focused code is independent and separate from the technical implementation details such as frameworks and databases. To summarize, you often see such code bases being composed of an “inside” (domain) and an “outside” (infrastructure).
+- The “inside” region contains all of the domain concepts, whereas the “outside” region contains the interactions with the outside world (e.g., UIs, databases, third-party integrations). The major rule here is that the “outside” depends on the “inside”—never the other way around. <p align="center"><img src="assets/ports-adapters.png" width="400px" height="auto"></p>
+
+### Package by Component
+
+I’s a hybrid approach to everything we’ve seen so far, with the goal of bundling all of the responsibilities related to a single coarse-grained component into a single Java package.
+- It’s about taking a service-centric view of a software system, which is something we’re seeing with micro-service architectures as well. In the same way that ports and adapters treat the web as just another delivery mechanism, “package by component” keeps the user interface separate from these coarse-grained components. <p align="center"><img src="assets/package-by-component.png" width="400px" height="auto"></p>
+- A key benefit of the “package by component” approach is that if you’re writing code that needs to do something with orders, there’s just one place to go—the `OrdersComponent`. Inside the component, the separation of concerns is still maintained, so the business logic is separate from data persistence, but that’s a component implementation detail that consumers don’t need to know about.
+
+### The Devil Is in the Implementation Details
+
+- Marking all of your types as `public` means you’re not taking advantage of the facilities that your programming language provides with regard to **encapsulation**. In some cases, there’s literally nothing preventing somebody from writing some code to instantiate a concrete implementation class directly, **violating** the intended architecture style.
+
+### Organization versus Encapsulation
+
+- Looking at this issue another way, if you make all types in your Java application `public`, the packages are simply an organization mechanism (a grouping, like folders), rather than being used for encapsulation.
+- The net result is that if you ignore the packages (because they don’t provide any means of encapsulation and hiding), it doesn’t really matter which architectural style you’re aspiring to create 🤷.
+- what I’ve described here relates to a monolithic app, where all of the code resides in a single source code tree. If you are building such an application (and many people are), I would certainly encourage you to lean on the **compiler** to enforce your architectural principles, rather than relying on **self-discipline** and **post-compilation** tooling.
+
+### Conclusion: The Missing Advice
+
+- :+1: The whole point of this chapter is to highlight that your best design intentions can be destroyed in a flash if you don’t consider the intricacies of the implementation strategy.
+- :+1: Think about how to map your desired design on to code structures, how to organize that code, and which decoupling modes to apply during runtime and compile-time.
+- :+1: Leave options open where applicable, but be pragmatic, and take into consideration the size of your team, their skill level, and the complexity of the solution in conjunction with your time and budgetary constraints.
+- :+1: Also think about using your compiler to help you enforce your chosen architectural style, and watch out for coupling in other areas, such as data models. The devil is in the implementation details.
