@@ -209,3 +209,27 @@ class HomeForSale: private Uncopyable {
 - To disallow functionality automatically provided by compilers, declare the corresponding member functions **private** and give no implementations. Using a base class like `Uncopyable` is one way to do this.
 
 ## Item 7: Declare destructors virtual in polymorphic base classes.
+
+- C++ specifies that when a **derived** class object is **deleted** through a pointer to a **base** class with a non-virtual destructor, results are **undefined**.
+```cpp
+class TimeKeeper {
+public:
+  TimeKeeper();
+  virtual ~TimeKeeper();
+...
+};
+
+TimeKeeper *ptk = getTimeKeeper();
+...
+delete ptk; // now behaves correctly
+```
+- If a class does not contain virtual functions, that often indicates it is not meant to be used as a base class. When a class is not intended to be a base class, making the destructor virtual is usually a bad idea.
+```cpp
+class SpecialString: public std::string { // bad idea! std::string has a non-virtual destructor
+};
+```
+- The same analysis applies to any class lacking a virtual destructor, including all the *STL* container types (e.g., vector, list, set, tr1::unordered_map, etc.).
+
+📆 Things to Remember
+- **Polymorphic** base classes should declare **virtual destructors**. If a class has any virtual functions, it should have a virtual destructor.
+- Classes not designed to be base classes (such as STL container types) or not designed to be used polymorphically should not declare virtual destructors.
