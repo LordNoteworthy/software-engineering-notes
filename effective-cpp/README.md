@@ -233,3 +233,37 @@ class SpecialString: public std::string { // bad idea! std::string has a non-vir
 📆 Things to Remember
 - **Polymorphic** base classes should declare **virtual destructors**. If a class has any virtual functions, it should have a virtual destructor.
 - Classes not designed to be base classes (such as STL container types) or not designed to be used polymorphically should not declare virtual destructors.
+
+## Item 8: Prevent exceptions from leaving destructors.
+
+- C++ does not like destructors that emit exceptions! ⚠️ yields undefined behavior or premature program termination.
+- If an operation may fail by throwing an exception and there may be a need to handle that exception, the exception has to come from some **non-destructor** function:
+```cpp
+class DBConn {
+public:
+  void close() {   // create an opportunity to react to problems that may arise:
+    db.close();    // giving clients a chance to handle exceptions arising from
+    closed = true; // that operation.
+  }
+  ~DBConn() {
+    if (!closed) {
+      try {
+        db.close(); // close the connection if the client didn’t
+      }
+      catch (...) { // if closing fails, note that and terminate or swallow
+      // make log entry that call to close failed;
+      }
+    }
+  }
+}
+private:
+  DBConnection db;
+  bool closed;
+};
+```
+
+📆 Things to Remember
+- Destructors should **never** emit **exceptions**. If functions called in a destructor may throw, the destructor should catch any exceptions, then swallow them or terminate the program.
+- If class clients need to be able to react to exceptions thrown during an operation, the class should provide a regular (i.e., non-destructor) function that performs the operation.
+
+## Item 9: Never call virtual functions during construction or destruction.
