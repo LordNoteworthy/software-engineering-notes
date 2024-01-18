@@ -267,3 +267,13 @@ private:
 - If class clients need to be able to react to exceptions thrown during an operation, the class should provide a regular (i.e., non-destructor) function that performs the operation.
 
 ## Item 9: Never call virtual functions during construction or destruction.
+
+- During base class construction, **virtual** functions never **go down** into **derived** classes. Instead, the object behaves as if it were of the base type.
+- ▶️ An object doesn’t become a derived class object until execution of a derived class constructor begins.
+- 👨‍🏫 The same reasoning applies during **destruction**.
+- There are different ways to approach this problem. One is to turn `logTransaction` into a **non-virtual** function in `Transaction`, then require that derived class constructors pass the necessary log information to the `Transaction` constructor.
+
+📆 Things to Remember
+- Don’t call virtual functions during construction or destruction, because such calls will never go to a more derived class than that of the currently executing constructor or destructor.
+
+## Item 10: Item 10: Have assignment operators return a reference to *this
