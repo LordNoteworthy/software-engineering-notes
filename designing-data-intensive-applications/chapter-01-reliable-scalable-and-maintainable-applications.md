@@ -13,7 +13,7 @@
 - Even though each category of these systems serves a specific purpose, many new tools for data storage and processing have emerged that are optimized for a variety of different use cases:
   - For example, there are data stores that are also used as **message queues (Redis)**,
   - and there are **message queues with database-like durability guarantees (Kafka)**,
-  - => the boundaries between the categories are becoming **blurred**.
+  - ▶️ the boundaries between the categories are becoming **blurred**.
 - If you are designing a data system or service, a lot of tricky questions arise:
   - How do you ensure that the data remains correct and complete, even when things go wrong internally?
   - How do you provide consistently good performance to clients, even when parts of your system are degraded?
@@ -39,8 +39,12 @@
 
 ### Software errors
 
-- Harder to anticipate because they are correlated across nodes, they tend to cause many more system failures than uncorrelated hardware faults. Examples include: - A software bug that causes every instance of an application server to crash when given a particular bad
-  input. For example, consider the leap second on _June 30, 2012_ that caused many applications to hang simultaneously, due to a **bug in the Linux kernel**. - A runaway process uses up some shared resource—CPU time, memory, disk space or network bandwidth. - A service that the system depends on slows down, becomes unresponsive or starts returning corrupted responses. - Cascading failures, where a small fault in one component triggers a fault in another component, which in turn triggers further faults.
+- Harder to anticipate because they are correlated across nodes, they tend to cause many more system failures than uncorrelated hardware faults. Examples include:
+  - A software **bug** that causes every instance of an application server to crash when given a particular bad
+  input. For example, consider the leap second on _June 30, 2012_ that caused many applications to hang simultaneously, due to a **bug in the Linux kernel**.
+  - A **runaway process** uses up some shared resource—CPU time, memory, disk space or network bandwidth.
+  - A **service** that the system depends on slows down, becomes **unresponsive** or starts returning corrupted responses.
+  - **Cascading failures**, where a small fault in one component triggers a fault in another component, which in turn triggers further faults.
 
 ## Human errors
 
@@ -102,7 +106,7 @@
 
 ## Simplicity: managing complexity
 
-- Moseley and Marks define complexity as _accidental_ if it is not inherent in the problem that the software solves (as seen by the users), but arises only from the implementation.
+- *Moseley and Marks* define complexity as _accidental_ if it is not inherent in the problem that the software solves (as seen by the users), but arises only from the implementation.
 - One of the best tools we have for removing accidental complexity is **abstraction**. A good abstraction can hide a great deal of implementation detail behind a clean, simple-to-understand facade.
 - High-level programming languages are abstractions that hide machine code, CPU registers and syscalls.
 - SQL is an abstraction that hides complex on-disk and in-memory data structures, concurrent requests from other clients, and inconsistencies after crashes.
