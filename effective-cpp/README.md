@@ -277,3 +277,41 @@ private:
 - Don’t call virtual functions during construction or destruction, because such calls will never go to a more derived class than that of the currently executing constructor or destructor.
 
 ## Item 10: Item 10: Have assignment operators return a reference to *this
+
+```cpp
+class Widget {
+public:
+  ...
+  // return type is a reference to the current class
+  Widget& operator=(const Widget& rhs) {
+  ...
+  return *this; // return the left-hand object
+}
+...
+};
+```
+
+- This convention applies to all **assignment** operators, not just the standard form shown above. Hence:
+```cpp
+class Widget {
+  public:
+  ...
+  Widget& operator+=(const Widget& rhs) // the convention applies to
+  {                                     // +=, -=, *=, etc.
+    ...
+    return *this;
+}
+
+  Widget& operator=(int rhs) // it applies even if the
+  {                          // operator’s parameter type
+  ...                        // is unconventional
+  return *this;
+  }
+...
+};
+```
+
+📆 Things to Remember
+- Have assignment operators return a reference to `*this.`
+
+## Item 11: Handle assignment to self in operator=
