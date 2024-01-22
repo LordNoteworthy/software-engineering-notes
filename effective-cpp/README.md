@@ -43,13 +43,13 @@ if (hasAcceptableQuality(aWidget)) ...
 
 ## Chapter 1: Accustoming Yourself to C++
 
-### Item 1: View C++ as a federation of languages.
+### Item 1: View C++ as a federation of languages
 
 - Today’s C++ is a multi-paradigm programming language, one supporting a combination of **procedural**, **object-oriented**, **functional**, **generic**, and **meta-programming** features.
 - Rules for effective C++ programming vary, depending on the part of C++ you are using: **C**, **Object-Oriented C++**, **Template C++** and The **STL**.
 > For example, pass-by-value is generally more efficient than pass-by-reference for built-in (i.e., C-like) types, but when you move from the C part of C++ to Object-Oriented C++, the existence of user-defined constructors and destructors means that pass-by-reference-to-const is usually better. This is especially the case when working in Template C++, because there, you don’t even know the type of object you’re dealing with. When you cross into the STL, however, you know that iterators and function objects are modeled on pointers in C, so for iterators and function objects in the STL, the old C pass-by-value rule applies again.
 
-### Item 2: Prefer consts, enums, and inlines to #defines.
+### Item 2: Prefer consts, enums, and inlines to #defines
 
 ```cpp
 #define authorName "Scott Meyers"; // bad
@@ -94,7 +94,7 @@ inline void callWithMax(const T& a, const T& b) {
 - For simple constants, prefer const objects or enums to `#defines`.
 - For function-like macros, prefer inline functions to `#defines`.
 
-### Item 3: : Use const whenever possible.
+### Item 3: : Use const whenever possible
 
 - Some programmers list const before the type. Others list it after the type but before the **asterisk**. There is no difference in meaning, so the following functions take the same parameter type:
 ```cpp
@@ -126,7 +126,7 @@ vec.begin();
    - Compilers enforce **bitwise constness**, but you should program using **logical constness**.
    - When `const` and `non-const` member functions have essentially identical implementations, code duplication can be avoided by having the non-const version call the const version.
 
-### Item 4: Make sure that objects are initialized before they’re used.
+### Item 4: Make sure that objects are initialized before they’re used
 
 - There are rules that describe when object initialization is guaranteed to take place and when it isn’t.
 - Unfortunately, the rules are **complicated** — too complicated to be worth memorizing.
@@ -171,7 +171,7 @@ public:
 📆 Things to Remember
 - Compilers may implicitly generate a class’s **default** constructor, **copy** constructor, **copy assignment** operator, and **destructor**.
 
-### Item 6: Explicitly disallow the use of compiler-generated functions you do not want.
+### Item 6: Explicitly disallow the use of compiler-generated functions you do not want
 
 - By declaring a member function explicitly, you prevent compilers from generating their own version, and by making the function private, you keep people from calling it
 ```cpp
@@ -208,7 +208,7 @@ class HomeForSale: private Uncopyable {
 📆 Things to Remember
 - To disallow functionality automatically provided by compilers, declare the corresponding member functions **private** and give no implementations. Using a base class like `Uncopyable` is one way to do this.
 
-## Item 7: Declare destructors virtual in polymorphic base classes.
+### Item 7: Declare destructors virtual in polymorphic base classes
 
 - C++ specifies that when a **derived** class object is **deleted** through a pointer to a **base** class with a non-virtual destructor, results are **undefined**.
 ```cpp
@@ -234,7 +234,7 @@ class SpecialString: public std::string { // bad idea! std::string has a non-vir
 - **Polymorphic** base classes should declare **virtual destructors**. If a class has any virtual functions, it should have a virtual destructor.
 - Classes not designed to be base classes (such as STL container types) or not designed to be used polymorphically should not declare virtual destructors.
 
-## Item 8: Prevent exceptions from leaving destructors.
+### Item 8: Prevent exceptions from leaving destructors
 
 - C++ does not like destructors that emit exceptions! ⚠️ yields undefined behavior or premature program termination.
 - If an operation may fail by throwing an exception and there may be a need to handle that exception, the exception has to come from some **non-destructor** function:
@@ -266,7 +266,7 @@ private:
 - Destructors should **never** emit **exceptions**. If functions called in a destructor may throw, the destructor should catch any exceptions, then swallow them or terminate the program.
 - If class clients need to be able to react to exceptions thrown during an operation, the class should provide a regular (i.e., non-destructor) function that performs the operation.
 
-## Item 9: Never call virtual functions during construction or destruction.
+### Item 9: Never call virtual functions during construction or destruction
 
 - During base class construction, **virtual** functions never **go down** into **derived** classes. Instead, the object behaves as if it were of the base type.
 - ▶️ An object doesn’t become a derived class object until execution of a derived class constructor begins.
@@ -276,7 +276,7 @@ private:
 📆 Things to Remember
 - Don’t call virtual functions during construction or destruction, because such calls will never go to a more derived class than that of the currently executing constructor or destructor.
 
-## Item 10: Item 10: Have assignment operators return a reference to *this
+### Item 10: Item 10: Have assignment operators return a reference to *this
 
 ```cpp
 class Widget {
@@ -314,4 +314,57 @@ class Widget {
 📆 Things to Remember
 - Have assignment operators return a reference to `*this.`
 
-## Item 11: Handle assignment to self in operator=
+### Item 11: Handle assignment to self in operator=
+
+- Example of assignment to self:
+```cpp
+a[i] = a[j]; // assignment to self if i and j have the same value
+*px = *py; // assignment to self if px and py happen to point to the same thing
+```
+- ‼️ In general, code that operates on references or pointers to **multiple objects** of the **same type** needs to consider that the objects might be the same.
+- Here’s an implementation of `operator=` that looks reasonable on the surface but is **unsafe** in the presence of assignment to self.
+
+```cpp
+Widget&
+Widget::operator=(const Widget& rhs) // unsafe impl. of operator=
+{
+  delete pb; // stop using current bitmap
+  pb = new Bitmap(*rhs.pb); // start using a copy of rhs’s bitmap
+  return *this; // see Item 10
+}
+```
+- The self-assignment problem here is that inside `operator=`, `*this`  and `rhs` could be the same object.
+  - ▶️ At the end of the function, the `Widget` — which should not have been changed by the assignment to self — finds itself holding a pointer to a deleted object!
+- Solution:
+  - Do an identity test at the top of operator=: `if (this == &rhs) return *this;`. This work, but it is still **exception-unsafe**.
+  - A careful **ordering** of statements can yield exception-safe:
+```cpp
+Widget& Widget::operator=(const Widget& rhs)
+{
+  Bitmap *pOrig = pb; // remember original pb
+  pb = new Bitmap(*rhs.pb); // point pb to a copy of rhs’s bitmap
+  delete pOrig; // delete the original pb until we've copied what it points to
+  return *this;
+}
+```
+- An alternative to the implementation above that is both exception and self-assignment-safe is to use the technique known as **copy and swap**:
+```cpp
+class Widget {
+...
+void swap(Widget& rhs); // exchange *this’s and rhs’s data;
+  ... // see Item 29 for details
+};
+Widget& Widget::operator=(const Widget& rhs)
+{
+  Widget temp(rhs); // make a copy of rhs’s data
+  swap(temp); // swap *this’s data with the copy’s
+  return *this;
+}
+```
+
+📆 Things to Remember
+- Make sure `operator=` is **well-behaved** when an object is assigned to itself.
+  - Techniques include **comparing** addresses of source and target objects, careful statement ordering, and copy-and-swap.
+- Make sure that any function operating on **more than one** object behaves correctly if two or more of the objects are the same.
+
+### Item 12: Copy all parts of an object
