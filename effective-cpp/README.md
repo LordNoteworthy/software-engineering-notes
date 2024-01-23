@@ -368,3 +368,37 @@ Widget& Widget::operator=(const Widget& rhs)
 - Make sure that any function operating on **more than one** object behaves correctly if two or more of the objects are the same.
 
 ### Item 12: Copy all parts of an object
+
+- When you declare your own copying functions, and you **later add** a data **member** to the class, you need to make sure that you update the copying functions too.
+- One of the most insidious ways this issue can arise is through inheritance:
+```cpp
+class PriorityCustomer : public Customer {
+  public:
+    PriorityCustomer(const PriorityCustomer& rhs);
+    PriorityCustomer &operator=(const PriorityCustomer& rhs);
+  private:
+    int priority;
+}
+
+PriorityCustomer::PriorityCustomer(const PriorityCustomer& rhs)
+    : Customer(rhs), // invoke base class copy ctor <- (might be forgotten)
+    priority(rhs.priority) {
+  logCall("PriorityCustomer copy constructor");
+}
+
+PriorityCustomer&
+PriorityCustomer::operator=(const PriorityCustomer& rhs) {
+  logCall("PriorityCustomer copy assignment operator");
+  Customer::operator=(rhs); // assign base class parts <- (might be forgotten)
+  priority = rhs.priority;
+  return *this;
+}
+```
+
+📆  Things to Remember
+- Copying functions should be sure to **copy** all of an **object’s data members** and all of its **base class** parts.
+- Don’t try to implement one of the copying functions in terms of the other. Instead, put **common functionality** in a third function that both call.
+
+## Resource Chapter 3: Resource Management
+
+### Item 13: Use objects to manage resources
