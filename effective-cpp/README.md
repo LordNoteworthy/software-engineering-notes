@@ -395,10 +395,32 @@ PriorityCustomer::operator=(const PriorityCustomer& rhs) {
 }
 ```
 
-📆  Things to Remember
+📆 Things to Remember
 - Copying functions should be sure to **copy** all of an **object’s data members** and all of its **base class** parts.
 - Don’t try to implement one of the copying functions in terms of the other. Instead, put **common functionality** in a third function that both call.
 
 ## Resource Chapter 3: Resource Management
 
 ### Item 13: Use objects to manage resources
+
+- Consider the function `f` below:
+```cpp
+void f() {
+  Investment *pInv = createInvestment(); // call factory function
+  ... // use pInv
+  delete pInv; // release object
+}
+```
+- Relying on `f` always getting to its `delete` statement simply isn’t viable because:
+  - a premature return statement.
+  - if the uses of `createInvestment` and `delete` were in a loop, and the loop was prematurely exited by a break or goto statement.
+  - “...” might throw an exception.
+  - think about how the code might change over time:
+    - somebody might add a `return` or `continue` statement
+    - the “...” part of `f` might call a function that never used to throw an exception but suddenly starts doing so after it has been “improved.”
+- 👎 Regardless of how the `delete` were to be skipped, we’d **leak** not only the memory containing the investment object but also any **resources** **held** by that object.
+- 👍 Solution is to put that resource inside an object whose destructor will **automatically release** the resource when control leaves `f` : `std::auto_ptr<Investment> pInv(createInvestment());`.
+
+📆 Things to Remember
+- To prevent resource leaks, use *RAII* (Resource acquisition is initialization) objects that acquire resources in their constructors and release them in their destructors.
+- Two commonly useful RAII classes are `tr1::shared_ptr` and `auto_ptr`. `tr1::shared_ptr` is usually the better choice, because its behavior when copied is intuitive. Copying an `auto_ptr` sets it to null.
