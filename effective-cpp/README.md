@@ -437,3 +437,29 @@ should prohibit it.
 📆 Things to Remember
 - Copying an RAII object entails copying the resource it manages, so the copying behavior of the resource determines the copying behavior of the RAII object.
 - Common RAII class copying behaviors are disallowing copying and performing reference counting, but other behaviors are possible.
+
+### Item 15: Provide access to raw resources in resource-managing classes.
+
+- `tr1::shared_ptr` and `auto_ptr` both offer a `get()` to perform an **explicit** conversion, i.e., to return (a copy of) the raw pointer
+inside the smart pointer object.
+- Like virtually all smart pointer classes, `tr1::shared_ptr` and `auto_ptr` also **overload** the pointer dereferencing operators (operator-> and operator*), and this allows **implicit** conversion to the underlying raw pointers.
+- Some programmers might find the need to **explicitly** request conversions **off-putting** enough to avoid using the class. That, in turn,
+would increase the chances of leaking fonts 🤷. The alternative is to offer an implicit conversion function:
+```cpp
+class Font {
+  public:
+  ...
+    operator FontHandle() const { // implicit conversion function
+      return f;
+    }
+...
+};
+```
+- That makes calling into the C API easy and natural, but can increase the chance of errors:
+  - ▶️ For example, a client might accidentally create a `FontHandle` when a `Font` object was intended: `FontHandle f2 = f1;`.
+- The best design is likely to make interfaces **easy** to use **correctly** and **hard** to use **incorrectly**.
+
+📆 Things to Remember
+
+- APIs often require access to raw resources, so each RAII class should offer a way to get at the resource it manages.
+- Access may be via explicit conversion or implicit conversion. In general, **explicit** conversion is **safer**, but **implicit** conversion is more **convenient** for clients.
