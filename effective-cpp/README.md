@@ -485,3 +485,20 @@ typedef std::string AddressLines[4];    // a person’s address has 4 lines,
 📆 Things to Remember
 - If you use `[]` in a `new` expression, you must use `[]` in the corresponding `delete` expression.
 - If you don’t use `[]` in a new expression, you mustn’t use `[]` in the corresponding `delete` expression.
+
+### Item 17: Store newed objects in smart pointers in standalone statements.
+
+- Consider the following code to call the function `processWidget`:
+```cpp
+processWidget(std::tr1::shared_ptr<Widget>(new Widget), priority())
+```
+- ‼️ A **leak** in the call to `processWidget` can arise because an **exception** can intervene between the time a resource is created (via `new Widget`) and the time that resource is turned over to a resource-managing object.
+- 👍 Use a separate statement to create the `Widget` and store it in a smart pointer, then pass the smart pointer to `processWidget`:
+```cpp
+std::tr1::shared_ptr<Widget> pw(new Widget); // store newed object in a smart pointer in a  standalone statement
+processWidget(pw, priority()); // this call won’t leak
+```
+
+📆 Things to Remember
+- Store newed objects in smart pointers in **standalone statements**.
+- Failure to do this can lead to subtle resource **leaks** when exceptions are thrown.
