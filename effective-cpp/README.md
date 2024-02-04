@@ -463,3 +463,25 @@ class Font {
 
 - APIs often require access to raw resources, so each RAII class should offer a way to get at the resource it manages.
 - Access may be via explicit conversion or implicit conversion. In general, **explicit** conversion is **safer**, but **implicit** conversion is more **convenient** for clients.
+
+### Item 16: Use the same form in corresponding uses of new and delete.
+
+- Does the pointer being deleted point to a **single** object or to an **array** of objects?
+  - Why ? ▶️ the memory layout for single objects is generally different from the memory layout for arrays.
+  - `delete []` includes the size of the array making it easy for `delete` to know **how many destructors** to call.
+- Abstain from `typedefs` for array types
+```cpp
+typedef std::string AddressLines[4];    // a person’s address has 4 lines,
+                                        // each of which is a string
+  // Because AddressLines is an array, this use of new,
+  std::string *pal = new AddressLines;  // note that “new AddressLines”
+                                        // returns a string*, just like
+                                        // “new string[4]” would
+  // must be matched with the array form of delete:
+  delete pal; // undefined!
+  delete [] pal; // fine
+```
+
+📆 Things to Remember
+- If you use `[]` in a `new` expression, you must use `[]` in the corresponding `delete` expression.
+- If you don’t use `[]` in a new expression, you mustn’t use `[]` in the corresponding `delete` expression.
