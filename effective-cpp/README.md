@@ -502,3 +502,33 @@ processWidget(pw, priority()); // this call won’t leak
 📆 Things to Remember
 - Store newed objects in smart pointers in **standalone statements**.
 - Failure to do this can lead to subtle resource **leaks** when exceptions are thrown.
+
+## Chapter 4: Design and Declarations
+
+### Item 18: Make interfaces easy to use correctly and hard to use incorrectly
+
+- Many client errors can be prevented by the introduction of **new types**. Indeed, the type system is your primary ally in preventing undesirable code from **compiling**.
+
+```cpp
+class Date {
+  public:
+    Date(const Month& m, const Day& d, const Year& y);
+...
+};
+Date d(30, 3, 1995); // error! wrong types
+Date d(Day(30), Month(3), Year(1995)); // error! wrong types
+Date d(Month(3), Day(30), Year(1995)); // okay,
+```
+- Another way to prevent likely client errors is to **restrict** what can be done with a **type**.
+  - ▶️ A common way to impose restrictions is to add **const**.
+- Unless there’s a good reason not to, have your types behave **consistently** with the **built-in types**:
+  - :100: Inconsistency imposes mental friction into a developer’s work that no IDE can fully remove !
+- 👍 Any interface that requires that clients **remember** to do something is prone to **incorrect use**, because clients can forget to do it.
+  - `std::tr1::shared_ptr<Investment> createInvestment();` essentially forces clients to store the return value in a `tr1::shared_ptr`, all but **eliminating** the possibility of **forgetting** to **delete** the underlying `Investment` object when it’s no longer being used.
+
+📆 Things to Remember
+- Good interfaces are easy to use correctly and hard to use incorrectly.
+- Ways to facilitate correct use include consistency in interfaces and behavioral compatibility with built-in types.
+- Ways to prevent errors include **creating new types**, **restricting** operations on types, **constraining** object values, and eliminating **client resource management** responsibilities.
+- `tr1::shared_ptr` supports custom deleters. This prevents the *crossDLL* problem, can be used to automatically unlock mutexes.
+
