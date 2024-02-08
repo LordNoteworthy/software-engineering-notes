@@ -505,7 +505,7 @@ processWidget(pw, priority()); // this call won’t leak
 
 ## Chapter 4: Design and Declarations
 
-### Item 18: Make interfaces easy to use correctly and hard to use incorrectly
+### Item 18: Make interfaces easy to use correctly and hard to use incorrectly.
 
 - Many client errors can be prevented by the introduction of **new types**. Indeed, the type system is your primary ally in preventing undesirable code from **compiling**.
 
@@ -532,3 +532,61 @@ Date d(Month(3), Day(30), Year(1995)); // okay,
 - Ways to prevent errors include **creating new types**, **restricting** operations on types, **constraining** object values, and eliminating **client resource management** responsibilities.
 - `tr1::shared_ptr` supports custom deleters. This prevents the *crossDLL* problem, can be used to automatically unlock mutexes.
 
+### Item 19: Treat class design as type design.
+
+- Virtually every class requires that you confront the following questions, the answers to which often lead to constraints on your design:
+  - How should objects of your new type be **created** and **destroyed**?
+  - How should object **initialization** differ from object **assignment**?
+  - What does it mean for objects of your new type to **be passed by value**?
+  - What are the **restrictions** on **legal values** for your new type?
+  - Does your new type fit into an **inheritance** graph?
+  - What kind of **type conversions** are **allowed** for your new type?
+  - What **operators** and **functions** make sense for the new type?
+  - What **standard functions** should be **disallowed**?
+  - Who should have **access** to the **members** of your new type?
+  - What is the *undeclared interface* of your new type?
+  - How **general** is your new type?
+  - Is a **new type** really what you **need**?
+
+📆 Things to Remember
+- **Class design is type design**. Before defining a new type, be sure to consider all the issues discussed in this Item.
+
+### Item 20: Prefer pass-by-reference-to-const to pass-by-value.
+
+- Consider the following code:
+```cpp
+class Person {
+  public:
+    Person(); // parameters omitted for simplicity
+    virtual ~Person(); // see Item 7 for why this is virtual
+...
+  private:
+    std::string name;
+    std::string address;
+};
+
+class Student: public Person {
+  public:
+    Student(); // parameters again omitted
+    virtual ~Student();
+  ...
+  private:
+    std::string schoolName;
+    std::string schoolAddress;
+};
+```
+- Invoking such call `bool validateStudent(Student s);` will result on:
+  - the `Student` copy constructor is called to initialize the parameter `s` from *plato*.
+  - every time you construct a `Student` object you must also construct two string objects ‼️.
+  - and every time you construct a `Student` object you must also construct a `Person` object, so each `Person` construction also entails two more string constructions.
+  - `s` is destroyed when `validateStudent` returns.
+- ▶️ When the copy of the `Student` object is **destroyed**, each constructor call is matched by a destructor call, so the overall cost of passing a `Student` by value is **six constructors** and **six destructors**! 🤷.
+- The solution is to use `bool validateStudent(const Student& s);` but remember to declare it **const**, because otherwise callers would have to worry about `validateStudent` making changes to the `Student` they passed in.
+- 👍 Passing parameters by reference also avoids the **slicing problem**. When a derived class object is passed (by value) as a base class object, the base class copy constructor is called, and the specialized features that make the object behave like a derived class object are “sliced” off.
+- ⚠️ Just because an object is **small** doesn’t mean that calling its copy constructor is **inexpensive**. Many objects — most STL containers among them — contain little more than a pointer, but copying such objects entails **copying everything they point to**. That can be very expensive.
+- ⚠️ Even when small objects have inexpensive copy constructors, some compilers refuse to put objects consisting of only a double into a register.
+- ⚠️ Being user-defined, their size is subject to change. A type that’s small now may be bigger in a future release, because its internal implementation may change. Things can even change when you switch to a different C++ implementation 👁️.
+
+📆 Things to Remember
+- Prefer **pass-by-reference-to-const** over **pass-by-value**. It’s typically more efficient and it avoids the *slicing problem*.
+- The rule doesn’t apply to **built-in** types and **STL** iterator and **function object** types. For them, **pass-by-value** is usually appropriate.
