@@ -590,3 +590,22 @@ class Student: public Person {
 📆 Things to Remember
 - Prefer **pass-by-reference-to-const** over **pass-by-value**. It’s typically more efficient and it avoids the *slicing problem*.
 - The rule doesn’t apply to **built-in** types and **STL** iterator and **function object** types. For them, **pass-by-value** is usually appropriate.
+
+### Item 21: Don’t try to return a reference when you must return an object.
+
+- Consider the following code:
+```cpp
+const Rational& operator*(const Rational& lhs, const Rational& rhs)
+{
+  Rational *result = new Rational(lhs.n * rhs.n, lhs.d * rhs.d);
+  return *result;
+}
+
+Rational w, x, y, z;
+w = x * y * z; // same as operator*(operator*(x, y), z)
+```
+- This is a guaranteed resource leak because of hidden pointers, i.e: `x * y`.
+- If we use a static variable `static Rational result;` tot return the resulted object, it violates **thread safety**, plus expressions like this: `Rational a, b, c, d; if ((a * b) == (c * d))` will always evaluate to true :-1:.
+
+📆 Things to Remember
+- Never return a **pointer** or **reference** to a **local stack** object, a **reference** to a **heap-allocated** object, or a **pointer** or **reference** to a **local static** object if there is a chance that more than one such object will be needed.
