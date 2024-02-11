@@ -609,3 +609,19 @@ w = x * y * z; // same as operator*(operator*(x, y), z)
 
 📆 Things to Remember
 - Never return a **pointer** or **reference** to a **local stack** object, a **reference** to a **heap-allocated** object, or a **pointer** or **reference** to a **local static** object if there is a chance that more than one such object will be needed.
+
+### Item 22: Declare data members private.
+
+- If data members aren’t public, the only way for clients to access an object is via **member functions** (▶️ uniform access).
+- Hiding data members behind functional interfaces can offer all kinds of implementation **flexibility**.
+  - notify other objects when data members are read or written
+  - ensure that class invariants are always maintained
+  - perform synchronization in threaded environments
+  - 👍 reserve the right to change your implementation decisions later ...
+- Protected data members are as **unencapsulated** as **public** ones, because in both cases, if the data members are changed, an unknowably large amount of client code is broken 🤷.
+
+📆 Things to Remember
+- Declare data members **private**. It gives clients syntactically **uniform access** to data, affords **fine-grained access control**, allows **invariants** to be **enforced**, and offers class authors implementation **flexibility**.
+- **Protected** is no more **encapsulated** than public.
+
+### Item 23: Prefer non-member non-friend functions to member functions.
