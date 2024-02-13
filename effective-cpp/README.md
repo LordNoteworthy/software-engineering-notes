@@ -625,3 +625,26 @@ w = x * y * z; // same as operator*(operator*(x, y), z)
 - **Protected** is no more **encapsulated** than public.
 
 ### Item 23: Prefer non-member non-friend functions to member functions.
+
+- OO principles dictate that data and the functions that operate on them should be bundled together, and that suggests that the member function is the better choice. Unfortunately, this suggestion is incorrect 🤷.
+- OO principles dictate that data should be as **encapsulated** as possible.
+  - 👍 The more something is encapsulated, the **fewer** things can **see** it. The fewer things can see it, the greater **flexibility** we have to change it.
+  - 👍 The **less** code that can see the data (i.e., access it), the more the data is **encapsulated**.
+  - As a coarse-grained measure of how much code can see a piece of data, we can count the **number of functions** that can access that data: ▶️ the **more functions** that can access it, the **less encapsulated** the data !
+- To solve this, we can:
+  - make `clearBrowser` a static member function of some utility class, As long as it’s not part of (or a friend of) `WebBrowser`.
+  - more natural approach would be to make `clearBrowser` a non-member function in the **same namespace** as `WebBrowser`:
+
+```cpp
+namespace WebBrowserStuff {
+  class WebBrowser { ... };
+  void clearBrowser(WebBrowser& wb);
+...
+}
+```
+- Namespaces, unlike classes, can be spread across multiple source files.
+  - 👍 Putting all convenience functions in multiple header files
+
+📆 Things to Remember
+- Prefer non-member non-friend functions to member functions. Doing so increases encapsulation, packaging flexibility, and functional
+extensibility.
