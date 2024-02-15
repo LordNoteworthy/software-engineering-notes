@@ -648,3 +648,38 @@ namespace WebBrowserStuff {
 📆 Things to Remember
 - Prefer non-member non-friend functions to member functions. Doing so increases encapsulation, packaging flexibility, and functional
 extensibility.
+
+### Item 24: Declare non-member functions when type conversions should apply to all parameters
+
+- Consider the following example:
+```cpp
+class Rational {
+  public:
+    Rational(int numerator = 0, int denominator = 1); // ctor is deliberately not explicit;
+                                                    // allows implicit int-to-Rational conversions
+    int numerator() const;                          // accessors for numerator and
+    int denominator() const;                        // denominator — see Item 22
+    const Rational operator*(const Rational& rh) const;
+private:
+...
+};
+```
+- This design lets you multiply rationals with the greatest of ease:
+```cpp
+Rational oneEighth(1, 8);
+Rational oneHalf(1, 2);
+Rational result = oneHalf * oneEighth;  // fine
+result = oneHalf * 2;                   // fine
+result = 2 * oneHalf                    // error!
+```
+- :triangular_flag_on_post: It turns out that parameters are eligible for **implicit type conversion** only if they are listed in the **parameter list**.
+- The implicit parameter corresponding to the object on which the member function is invoked — the one `this` points to — is never eligible for implicit conversions.
+- To support mixed-mode arithmetic, the way to do it is to make `operator*` a non-member function, thus allowing compilers to perform implicit type conversions on all arguments: `const Rational operator*(const Rational& lhs, const Rational& rhs)`
+- Should `operator*` be made a friend of the Rational class?
+  - 👎 No ! the opposite of a member function is a **non-member** function, not a **friend** function.
+
+📆 Things to Remember
+- If you need type conversions on all parameters to a function (including the one that would otherwise be pointed to by the this pointer),
+the function must be a non-member.
+
+### Item 25: Consider support for a non-throwing swap.
