@@ -683,3 +683,61 @@ result = 2 * oneHalf                    // error!
 the function must be a non-member.
 
 ### Item 25: Consider support for a non-throwing swap.
+
+- When a user define types contains members such as vectors (also imagine if inheritance is used), it is inefficient to use the default `swap` algorithm:
+  - Because you might want to only swap pointers instead of doing multiple copies.
+  - ▶️ Solution is to **specialize** `std::swap` for our user defined type.
+```cpp
+class Widget {
+public:
+  ...
+  void swap(Widget& other) {
+    using std::swap; // the need for this declaration is explained later in this Item
+    swap(pImpl, other.pImpl); // to swap Widgets, swap their pImpl pointers
+  }
+  ...
+  };
+
+namespace std {
+  template<>                                  // revised specialization of
+  void swap<Widget>(Widget& a,  Widget& b) {  // std::swap to swap Widgets,
+    a.swap(b);                                // call their swap member function
+  }
+}
+```
+- Suppose, however, that `Widget` is a class **templates** instead of classes:
+  - ⚠️ C++ allows **partial** specialization of class templates, it doesn’t allow it for function templates.
+  - The usual approach is to simply add an overload. That would look like this:
+  ```cpp
+  namespace std {
+    template<typename T> // an overloading of std::swap
+    void swap(Widget<T>& a, Widget<T>& b) { // (note the lack of “<...>” after  “swap”),
+      a.swap(b); // but see below for why this isn’t valid code
+    }
+  }
+  ```
+  - In general, **overloading** function templates is fine, but `std` is a special namespace!
+  - It’s okay to totally specialize templates in `std`, but it’s not okay to **add** new templates (or classes or functions or anything else) to `std`.
+  - The answer is simple. We still declare a non-member swap that calls the member swap, we just don’t declare the non-member to be a specialization or overloading of `std::swap`:
+```cpp
+  namespace WidgetStuff {
+  ... // templatized WidgetImpl, etc.
+  template<typename T>    // as before, including the swap
+  class Widget { ... };   // member function
+  ...
+  template<typename T>                      // non-member swap function;
+  void swap(Widget<T>& a,  Widget<T>& b) {  // not part of the std namespace
+    a.swap(b);
+    }
+  }
+```
+- Why the member version of `swap` should never throw exceptions ?
+  - one of the most useful applications of `swap` is to help classes (and class templates) offer the **strong exception-safety guarantee**.
+  - highly efficient swaps are almost always based on operations on **built-in** types (such as the pointers underlying the `pimpl` idiom), and operations on built-in types never throw exceptions.
+
+
+📆 Things to Remember
+- Provide a `swap` **member function** when `std::swap` would be **inefficient** for your type. Make sure your `swap` doesn’t throw **exceptions**.
+- If you offer a member `swap`, also offer a **non-member** `swap` that calls the member. For classes (not templates), specialize `std::swap`, too.
+- When calling `swap`, employ a `using` declaration for `std::swap`, then call `swap` without namespace qualification.
+- It’s fine to totally **specialize** `std` templates for user-defined types, but never try to **add** something completely new to `std`.
