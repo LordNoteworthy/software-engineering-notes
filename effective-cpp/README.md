@@ -399,7 +399,7 @@ PriorityCustomer::operator=(const PriorityCustomer& rhs) {
 - Copying functions should be sure to **copy** all of an **object’s data members** and all of its **base class** parts.
 - Don’t try to implement one of the copying functions in terms of the other. Instead, put **common functionality** in a third function that both call.
 
-## Resource Chapter 3: Resource Management
+## Chapter 3: Resource Management
 
 ### Item 13: Use objects to manage resources
 
@@ -741,3 +741,36 @@ namespace std {
 - If you offer a member `swap`, also offer a **non-member** `swap` that calls the member. For classes (not templates), specialize `std::swap`, too.
 - When calling `swap`, employ a `using` declaration for `std::swap`, then call `swap` without namespace qualification.
 - It’s fine to totally **specialize** `std` templates for user-defined types, but never try to **add** something completely new to `std`.
+
+## Chapter 5 : Implementations
+
+### Item 26: Postpone variable definitions as long as possible
+
+- The real meaning of *as long as possible* in this Item’s title is:
+  - Not only should you **postpone** a variable’s definition until right before you have to use the variable, you should also try to postpone the definition until you have initialization arguments for it.
+  - By doing so, you avoid **constructing** and **destructing** unneeded objects, and you avoid **unnecessary default constructions**.
+- What about loops ?
+```cpp
+// Approach A: define outside loop
+Widget w;
+for (int i = 0; i < n; ++i) {
+  w = some value dependent on i;
+  ...
+}
+
+// Approach B: define inside loop
+for (int i = 0; i < n; ++i) {
+  Widget w(some value dependent on i)
+  ...
+}
+```
+- The costs of these two approaches are as follows:
+  - Approach A: 1 constructor + 1 destructor + n assignments.
+  - Approach B: n constructors + n destructors.
+- For classes where an assignment costs less than a constructor-destructor pair, Approach `A` is generally more efficient. This is especially the case as `n` gets large.
+- Otherwise, Approach `B` is probably better.
+- Approach `A` makes the name `w` **visible** in a larger scope than Approach B, something that’s contrary to program **comprehensibility** and **maintainability**.
+- ▶️ unless you know that (1) assignment is less expensive than a constructor-destructor pair and (2) you’re dealing with a performance-sensitive part of your code, you should default to using Approach B.
+
+📆 Things to Remember
+- Postpone variable definitions as long as possible. It increases program clarity and improves program efficiency.
