@@ -774,3 +774,19 @@ for (int i = 0; i < n; ++i) {
 
 📆 Things to Remember
 - Postpone variable definitions as long as possible. It increases program clarity and improves program efficiency.
+
+### Item 27: Minimize casting.
+
+- The old-style casts continue to be legal, but the new forms are **preferable**.
+  - 👍 they’re much easier to identify in code (both for humans and for tools like grep).
+  - 👍 the more **narrowly** specified **purpose** of each cast makes it possible for compilers to diagnose usage errors.
+- ▶️ The only time I use an old-style cast is when I want to call an **explicit constructor** to pass an object to a function
+- ⚠️ Many programmers believe that casts do nothing but tell compilers to treat one type as another, but this is **mistaken** !
+  - Type conversions of any kind (either explicit via casts or implicit by compilers) often lead to code that is executed at **runtime**.
+- Alternatives to `dynamic_casting` is using **type-safe containers** or moving virtual functions **up the hierarchy**.
+- Avoid is designs that involve **cascading** `dynamic_casts` ▶️ generates code that’s big and slow, plus it’s brittle.
+
+📆 Things to Remember
+- Avoid casts whenever practical, especially `dynamic_casts` in performance-sensitive code. If a design requires casting, try to develop a **cast-free** alternative.
+- When casting is necessary, try to hide it inside a function. Clients can then call the function instead of putting casts in their own code.
+- Prefer C++-style casts to old-style casts. They are easier to see, and they are more specific about what they do.
