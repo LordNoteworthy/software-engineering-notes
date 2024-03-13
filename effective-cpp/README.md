@@ -790,3 +790,26 @@ for (int i = 0; i < n; ++i) {
 - Avoid casts whenever practical, especially `dynamic_casts` in performance-sensitive code. If a design requires casting, try to develop a **cast-free** alternative.
 - When casting is necessary, try to hide it inside a function. Clients can then call the function instead of putting casts in their own code.
 - Prefer C++-style casts to old-style casts. They are easier to see, and they are more specific about what they do.
+
+
+### Item 29: Strive for exception-safe code.
+
+- As a general rule, less code is better code, because there’s less to go wrong and less to misunderstand when making changes.
+- Exception-safe functions offer one of three guarantees:
+  - Functions offering the **basic guarantee** promise that if an exception is thrown, everything in the program remains in a valid state.
+  - Functions offering the **strong guarantee** promise that if an exception is thrown, the state of the program is unchanged.
+  - Functions offering the **nothrow guarantee** promise never to throw exceptions, because they always do what they promise to do.
+- All "exception guarantees" characteristics are determined by the function’s **implementation**, not its **declaration**.
+- 👍 It’s a good policy not to change the status of an object to indicate that something has happened until something actually has.
+- *copy and swap* is a general design strategy that typically leads to the strong guarantee:
+  - Make a **copy** of the object you want to modify, then make all needed changes to the copy.
+  - If any of the modifying operations throws an **exception**, the original object remains **unchanged**.
+  - After all the changes have been successfully completed, **swap** the modified object with the original in a nonthrowing operation.
+
+📆 Things to Remember
+
+- Exception-safe functions **leak no resources** and allow no data structures to become **corrupted**, even when exceptions are thrown. Such functions offer the basic, strong, or `nothrow` guarantees.
+- The strong guarantee can often be implemented via **copy-and-swap**, but the strong guarantee is not practical for all functions.
+- A function can usually offer a guarantee **no stronger** than the weakest guarantee of the functions it **calls**
+
+### Item 30: Understand the ins and outs of inlining
