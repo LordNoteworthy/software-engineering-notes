@@ -791,6 +791,36 @@ for (int i = 0; i < n; ++i) {
 - When casting is necessary, try to hide it inside a function. Clients can then call the function instead of putting casts in their own code.
 - Prefer C++-style casts to old-style casts. They are easier to see, and they are more specific about what they do.
 
+### Item 28: Avoid returning “handles” to object internals.
+
+- A data member is only as **encapsulated** as the most accessible function **returning a reference** to it.
+- If a const member function **returns a reference** to data associated with an object that is stored outside the object itself, the caller of the function can **modify** that data ▶️ `Point& upperLeft() const { return pData->ulhc; }`.
+- References, pointers, and iterators are all **handles** (ways to get at other objects), and returning a handle to an object’s internals always runs the **risk** of compromising an object’s **encapsulation**.
+- You should never have a **member function** return a pointer to a less accessible member function !
+  - 🤷 because clients will be able to get a pointer to the less accessible function, then call that function through the pointer.
+- Both of the problems we’ve identified for those functions can be eliminated by simply applying `const` to their return types:
+```cpp
+class Rectangle {
+public:
+  ...
+  const Point& upperLeft() const { return pData->ulhc; }
+  const Point& lowerRight() const { return pData->lrhc; }
+  ...
+};
+```
+- Even so, `upperLeft` and `lowerRight` are still returning handles to an object’s internals, and that can be problematic in other ways.
+  - In particular, it can lead to **dangling handles**: handles that refer to parts of objects that don’t exist any longer.
+  - Most common source of such disappearing objects are function return **values**.
+```cpp
+const Point *pUpperLeft = &(boundingBox(*pgo).upperLeft()); // get a ptr to the upper left point of its bounding box
+```
+  - ⚠️ At the end of the statement, `boundingBox’s` return value — *temp* — will be **destroyed**, and that will indirectly lead to the destruction of *temp’s* `Points`. That, in turn, will leave `pUpperLeft` pointing to an object that no longer exists; `pUpperLeft` will dangle by the end of the statement that created it !
+- Once a **handle** is being returned, you run the risk that the handle will **outlive** the object it refers to!
+
+📆 Things to Remember
+
+- Avoid returning handles (references, pointers, or iterators) to object internals. Not returning handles increases encapsulation, helps const member functions act const, and minimizes the creation of dangling handles.
+
 
 ### Item 29: Strive for exception-safe code.
 
