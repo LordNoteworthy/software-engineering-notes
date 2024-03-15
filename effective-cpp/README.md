@@ -818,7 +818,6 @@ const Point *pUpperLeft = &(boundingBox(*pgo).upperLeft()); // get a ptr to the 
 - Once a **handle** is being returned, you run the risk that the handle will **outlive** the object it refers to!
 
 📆 Things to Remember
-
 - Avoid returning handles (references, pointers, or iterators) to object internals. Not returning handles increases encapsulation, helps const member functions act const, and minimizes the creation of dangling handles.
 
 
@@ -837,9 +836,48 @@ const Point *pUpperLeft = &(boundingBox(*pgo).upperLeft()); // get a ptr to the 
   - After all the changes have been successfully completed, **swap** the modified object with the original in a nonthrowing operation.
 
 📆 Things to Remember
-
 - Exception-safe functions **leak no resources** and allow no data structures to become **corrupted**, even when exceptions are thrown. Such functions offer the basic, strong, or `nothrow` guarantees.
 - The strong guarantee can often be implemented via **copy-and-swap**, but the strong guarantee is not practical for all functions.
 - A function can usually offer a guarantee **no stronger** than the weakest guarantee of the functions it **calls**
 
 ### Item 30: Understand the ins and outs of inlining
+
+- Inlining can be implicit or explicit:
+  - The **implicit** way is to define a function inside a class definition:
+```cpp
+class Person {
+public:
+...
+  int age() const { return theAge; } // an implicit inline request: age is
+  ...                                // defined in a class definition
+private:
+  int theAge;
+};
+```
+  - The **explicit** way is to use the `inline` keyword:
+```cpp
+template<typename T>                              // an explicit inline
+inline const T& std::max(const T& a, const T& b)  // request: std::max is
+{ return a < b ? b : a; }                         // preceded by “inline”
+```
+- Inlining is a **request** to the compiler, not a **command**.
+  - Most compilers refuse to inline functions they deem too complicated (e.g., those that contain **loops** or are **recursive**),
+  - Calls to **virtual functions** defy inlining.
+- If your program takes the **address** of an inline function, compilers must typically generate an outlined function body for it.
+```cpp
+inline void f() {...} // assume compilers are willing to inline calls to f
+void (*pf )() = f;    // pf points to f
+
+f();  // this call will be inlined, because it’s a “normal” call
+pf(); // this call probably won’t be, because it’s through a function pointer
+```
+- Library designers must evaluate the impact of declaring functions `inline`, because it’s impossible to provide binary upgrades to the client visible inline functions in a library.
+  - ▶️ Cost of recompiling vs relinking.
+- Most **debuggers** have trouble with inline functions:
+  - some build environments manage to support debugging of inlined functions,
+  -  many environments simply **disable** inlining for **debug** builds.
+- 👍 Don’t forget the empirically determined rule of 80-20, which states that a typical program spends 80% of its time executing only 20% of its code. It’s an important rule, because it reminds you that your goal as a software developer is to identify the 20% of your code that can increase your program’s overall performance.
+
+📆 Things to Remember
+- Limit most inlining to small, frequently called functions. This facilitates debugging and binary upgradability, minimizes potential code bloat, and maximizes the chances of greater program speed.
+- Don’t declare function templates inline just because they appear in header files.
