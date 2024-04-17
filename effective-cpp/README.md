@@ -955,3 +955,42 @@ std::cout << pp->name() << " was born on " << pp->birthDate() << " and now lives
 - Public inheritance means “*is-a.*” Everything that applies to base classes must also apply to derived classes, because every derived class object is a base class object.
 
 ### Item 33: Avoid hiding inherited names.
+
+- When compilers see the use of the name `mf2` here, they have to figure out what it refers to. They do that by searching scopes for a declaration of something named `mf2`:
+  1. First they look in the **local scope** (that of `mf4`), but they find no declaration for anything called `mf2`.
+  2. They then search the **containing scope**, that of the class `Derived`. They still find nothing named `mf2`,
+  3. So they move on to the next **containing scope**, that of the **base** class. There they find something named `mf2`, so the search stops. If there were no `mf2` in `Base`, the search would continue,
+  4. First to the **namespace(s)** containing `Derived`, if any, and finally to the **global** scope.
+  ```cpp
+  class Base {
+  private:
+    int x;
+  public:
+    virtual void mf1() = 0;
+    virtual void mf1(int);
+    virtual void mf2();
+    void mf3();
+    void mf3(double);
+  ...
+  };
+  class Derived: public Base {
+  public:
+    virtual void mf1();
+    void mf3();
+    void mf4();
+  ...
+  }
+  ```
+- ⚠️ The scope-based name hiding rule hasn’t changed, so all functions named `mf1` and `mf3` in the **base** class are hidden by the functions named `mf1` and `mf3` in the **derived** class. From the perspective of name lookup, `Base::mf1` and `Base::mf3` are no longer **inherited** by `Derived`!
+- As you can see, this applies even though the functions in the base and derived classes take **different parameter types**, and it also applies regardless of whether the functions are **virtual** or **non-virtual**.
+- You’re using **public** inheritance and you don’t inherit the **overloads**, you’re violating the *is-a* relationship between base and derived classes which is fundamental to public inheritance 💁‍♂️.
+- You’ll almost always want to override C++’s **default hiding of inherited names**. This can be solved with **using declarations**:
+  ```cpp
+  using Base::mf1; // make all things in Base named mf1 and mf3
+  using Base::mf3; // visible (and public) in Derived’s scope
+  ```
+
+📆 Things to Remember
+
+- Names in derived classes hide names in base classes. Under public inheritance, this is never desirable.
+- To make hidden names visible again, employ using declarations or forwarding functions.

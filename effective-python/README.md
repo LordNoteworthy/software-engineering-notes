@@ -24,15 +24,15 @@ help you make the transition to Python 3.
 
 <details><summary>⭐ Rules for Whitespace:</summary>
 
-- Use spaces instead of tabs for indentation.
-- Use four spaces for each level of syntactically significant indenting.
-- Lines should be 79 characters in length or less.
-- Continuations of long expressions onto additional lines should be indented by four extra spaces from their normal indentation level.
-- In a file, functions and classes should be separated by two blank lines.
-- In a class, methods should be separated by one blank line.
-- In a dictionary, put no whitespace between each key and colon, and put a single space before the corresponding value if it fits on the same line.
-- Put one—and only one—space before and after the = operator in a variable assignment.
-- For type annotations, ensure that there is no separation between the variable name and the colon, and use a space before the type information.
+- Use **spaces** instead of **tabs** for indentation.
+- Use **four spaces** for each level of syntactically significant indenting.
+- Lines should be **79** characters in length or less.
+- Continuations of **long expressions** onto additional lines should be indented by **four** extra spaces from their normal indentation level.
+- In a file, functions and classes should be separated by **two blank lines**.
+- In a class, methods should be separated by **one blank line**.
+- In a dictionary, put **no whitespace** between each **key** and **colon**, and put a **single space** before the corresponding value if it fits on the same line.
+- Put one and only **one—space** before and after the `=` operator in a variable assignment.
+- For type **annotations**, ensure that there is **no separation** between the variable name and the colon, and use a **space** before the type information.
 </details>
 
 <details><summary>⭐ Rules for Naming:</summary>
@@ -67,3 +67,5 @@ help you make the transition to Python 3.
 - Always follow the Python Enhancement Proposal #8 (PEP 8) style guide when writing Python code.
 - Sharing a common style with the larger Python community facilitates collaboration with others.
 - Using a consistent style makes it easier to modify your own code later.
+
+### Item 3: Know the Differences Between bytes and str
