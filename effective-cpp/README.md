@@ -922,7 +922,6 @@ public:
 static std::tr1::shared_ptr<Person> create(const std::string& name, const Date& birthday, const Address& addr);
 
 // Client use them like this:
-
 std::string name;
 Date dateOfBirth;
 Address address;
@@ -946,3 +945,13 @@ std::cout << pp->name() << " was born on " << pp->birthDate() << " and now lives
 ## Chapter 6: Inheritance and Object-Oriented Design Object-Oriented Design
 
 ### Item 32: Make sure public inheritance models “is-a.”
+
+- If you write that `class D` (“Derived”) publicly inherits from `class B` (“Base”), you are telling C++ compilers (as well as human readers of your code) that every object of type D is also an object of type B, but not **vice versa**.
+- Any function that expects an argument of type `Person` (or pointer-to-Person or reference-to-Person) will also take a `Student` object (or pointer-to-Student or reference-to-Student).
+- You’ll have to augment your intuition with new insights to guide you in inheritance’s proper application. In time, the notion of having `Penguin` inherit from `Bird` or `Square` inherit from `Rectangle` will give you the same funny feeling you probably get now when somebody shows you a function several pages long. It’s possibly the right way to approach things, it’s just not very likely 🤷.
+
+📆 Things to Remember
+
+- Public inheritance means “*is-a.*” Everything that applies to base classes must also apply to derived classes, because every derived class object is a base class object.
+
+### Item 33: Avoid hiding inherited names.
