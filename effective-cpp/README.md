@@ -742,7 +742,7 @@ namespace std {
 - When calling `swap`, employ a `using` declaration for `std::swap`, then call `swap` without namespace qualification.
 - It’s fine to totally **specialize** `std` templates for user-defined types, but never try to **add** something completely new to `std`.
 
-## Chapter 5 : Implementations
+## Chapter 5: Implementations
 
 ### Item 26: Postpone variable definitions as long as possible
 
@@ -881,3 +881,68 @@ pf(); // this call probably won’t be, because it’s through a function pointe
 📆 Things to Remember
 - Limit most inlining to small, frequently called functions. This facilitates debugging and binary upgradability, minimizes potential code bloat, and maximizes the chances of greater program speed.
 - Don’t declare function templates inline just because they appear in header files.
+
+### Item 31: Minimize compilation dependencies between files.
+
+- **Forward declaration** can be used to minimize header dependencies, however some challenges might occur:
+  - forward declaration of `std::string` is incorrect !
+  - difficulty with forward-declaring everything has to do with the need for compilers to know the **size** of objects during compilation.
+    - a workaround is to use the **pimpl idiom**: : *hide the object implementation behind a pointer*.
+- the essence of minimizing compilation dependencies: make your header files **self-sufficient** whenever it’s practical, and when it’s not, depend on **declarations** in other files, not **definitions** Everything else flows from this simple design strategy. Hence:
+  - 👍 Avoid using objects when object references and pointers will do.
+  - 👍 Depend on class **declarations** instead of class **definitions** whenever you can.
+  - 👍 Provide separate header files for declarations and definitions.
+- Classes like `Person` that employ the *pimpl* idiom are often called **Handle** classes.
+```cpp
+#include "Person.h"     // we’re implementing the Person class, so we must #include its class definition
+#include "PersonImpl.h" // we must also #include PersonImpl’s class definition, otherwise we couldn’t call
+                        // its member functions; note that PersonImpl has exactly the same public  member
+                        // functions as Person — their interfaces are identical
+Person::Person(const std::string& name, const Date& birthday, const Address& addr)
+: pImpl(new PersonImpl(name, birthday, addr)) {}
+
+std::string Person::name() const {
+  return pImpl->name();
+}
+```
+- 💲 Cost:
+  - member functions have to go through the implementation pointer to get to the object’s data ▶️ That adds one level of indirection per access.
+  - the size of this implementation pointer to the amount of memory required to store each object.
+  - incur the overhead inherent in dynamic memory allocation (and subsequent deallocation) and the possibility of encountering `bad_alloc` (out-of-memory) exceptions.
+- An alternative to the *Handle* class approach is to make `Person` a special kind of abstract base class called an **Interface** class.
+```cpp
+class Person {
+public:
+  virtual ~Person();
+  virtual std::string name() const = 0;
+  virtual std::string birthDate() const = 0;
+  virtual std::string address() const = 0;
+
+// return a tr1::shared_ptr to a new Person initialized with the given params;
+static std::tr1::shared_ptr<Person> create(const std::string& name, const Date& birthday, const Address& addr);
+
+// Client use them like this:
+
+std::string name;
+Date dateOfBirth;
+Address address;
+...
+// create an object supporting the Person interface
+std::tr1::shared_ptr<Person> pp(Person::create(name, dateOfBirth, address));
+
+// use the object via the  Person interface
+std::cout << pp->name() << " was born on " << pp->birthDate() << " and now lives at " << pp->address();
+};
+```
+- 💲 Cost:
+  - every function call is virtual, so you pay the cost of an indirect jump each time you make a function call
+  - objects derived from the Interface class must contain a virtual table pointer. This pointer may increase the amount of memory needed to store an object, depending on whether the Interface class is the exclusive source of virtual functions for the object.
+
+📆 Things to Remember
+
+- The general idea behind minimizing compilation dependencies is to depend on **declarations** instead of **definitions**. Two approaches based on this idea are **Handle classes** and **Interface classes**.
+- Library header files should exist in full and declaration-only forms. This applies regardless of whether templates are involved.
+
+## Chapter 6: Inheritance and Object-Oriented Design Object-Oriented Design
+
+### Item 32: Make sure public inheritance models “is-a.”
