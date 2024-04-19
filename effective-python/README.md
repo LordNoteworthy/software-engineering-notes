@@ -18,9 +18,9 @@ help you make the transition to Python 3.
 - Be sure that the command-line executable for running Python on your system is the version you expect it to be.
 - Avoid **Python 2** because it will no longer be maintained after *January 1, 2020*.
 
-### Item 2: Item 2: Follow the PEP 8 Style Guide
+### Item 2: Follow the PEP 8 Style Guide
 
-- Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide for how to **format** Python code.
+Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide for how to **format** Python code.
 
 <details><summary>⭐ Rules for Whitespace:</summary>
 
@@ -54,6 +54,7 @@ help you make the transition to Python 3.
 - Avoid **single-line** `if` statements, `for` and `while` loops, and `except` compound statements. Spread these over multiple lines for clarity.
 - If you can’t fit an expression on one line, surround it with parentheses and add line breaks and indentation to make it easier to read.
 - Prefer surrounding multiline expressions with parentheses over using the \ line continuation character.
+</details>
 
 <details><summary>⭐ Imports:</summary>
 
@@ -61,11 +62,26 @@ help you make the transition to Python 3.
 - Always use **absolute** names for modules when importing them, not names **relative** to the current module’s own path. For example, to import the foo module from within the bar package, you should use f`rom bar import foo`, not just `import foo`.
 - If you must do relative imports, use the **explicit** syntax `from . import foo`.
 - Imports should be in sections in the following **order**: standard library modules, third-party modules, your own modules. Each subsection should have imports in **alphabetical** order.
+</details>
 
 📆 Things to Remember
 
-- Always follow the Python Enhancement Proposal #8 (PEP 8) style guide when writing Python code.
-- Sharing a common style with the larger Python community facilitates collaboration with others.
-- Using a consistent style makes it easier to modify your own code later.
+- Always follow the *Python Enhancement Proposal* #8 (PEP 8) style guide when writing Python code.
+- Sharing a **common** style with the larger Python community facilitates collaboration with others.
+- Using a **consistent** style makes it easier to modify your own code later.
 
 ### Item 3: Know the Differences Between bytes and str
+
+- `str` instances do not have an associated binary encoding, and bytes instances do not have an associated text encoding.
+- To convert Unicode data ▶️ binary data, you must call the `encode` method of `str`.
+- To convert binary data ▶️ Unicode data, you must call the `decode` method of `bytes`.
+- You can explicitly specify the encoding you want to use for these methods, or accept the system default, which is commonly *UTF-8*.
+- When you’re writing Python programs, it’s important to do encoding and decoding of Unicode data at the furthest boundary of your interfaces; this approach is often called the **Unicode sandwich**.
+
+📆 Things to Remember
+
+- `bytes` contains sequences of 8-bit values, and `str` contains sequences of *Unicode* code points.
+- Use helper functions to ensure that the inputs you operate on are the type of character sequence that you expect (8-bit values, UTF-8-encoded strings, Unicode code points, etc).
+- `bytes` and `str` instances can’t be used together with operators (like >, ==, +, and %).
+- If you want to read or write **binary** data to/from a file, always open the file using a **binary** mode (like 'rb' or 'wb').
+- If you want to read or write **Unicode** data to/from a file, be careful about your system’s **default text encoding**. Explicitly pass the encoding parameter to open if you want to avoid surprises.
