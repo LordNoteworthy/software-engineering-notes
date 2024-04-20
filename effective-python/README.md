@@ -85,3 +85,30 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - `bytes` and `str` instances can’t be used together with operators (like >, ==, +, and %).
 - If you want to read or write **binary** data to/from a file, always open the file using a **binary** mode (like 'rb' or 'wb').
 - If you want to read or write **Unicode** data to/from a file, be careful about your system’s **default text encoding**. Explicitly pass the encoding parameter to open if you want to avoid surprises.
+
+### Item 4: Prefer Interpolated F-Strings Over C-style Format Strings and str.format
+
+- Python has four different ways of formatting strings that are built into the language and standard library:
+  1. **% formatting operator**: The syntax for format specifiers comes from C’s `printf` function, which has been inherited by Python.
+     - 👎 **Problem #1**: You need to **constantly** check that the two sides of the % operator are in **sync**.
+     - 👎 **Problem #2**: They become difficult to read when you need to make small **modifications** to values **before formatting** them into a string.
+     - 👎 **Problem #3** :if you want to use the same value in a format string **multiple** times, you have to repeat it in the right side tuple.
+     - 🤷 Using dictionaries in formatting expressions solves **problem #1** and **problem #3** but exacerbate **problem #2**.
+     - 👎 Using dictionaries in formatting expressions also increases verbosity, which is **problem #4** with C-style formatting expressions in Python.
+  2. `format` Built-in and `str.format`:
+     - Python 3 introduces a new formatting option: `formatted = format(a, ',.2f')` or you can use placeholders with `{}` (**positional** arguments by default).
+     - Like the C-style formatting which required doubling the `%` character to **escape** it, `str.format` needs braces to be escaped.
+     - 👎 Does nothing to address **problem #2** from above.
+     - 👎 Don’t help reduce the redundancy of repeated keys from **problem #4** above.
+  3. **Interpolated Format Strings**:
+     - Python 3.6 added interpolated format strings or **f-strings** for short.
+     - This new language syntax requires you to prefix format strings with an `f` character.
+     - 👍 All of the same options from the new format built-in mini language are available after the colon in the placeholders within an f-string, as is the ability to coerce values to *Unicode* and *repr* strings similar to the `str.format`.
+     - 👍 Enable you to put a full Python expression within the placeholder braces, solving **problem #2**.
+
+📆 Things to Remember
+
+- **C-style** format strings that use the % operator suffer from a variety of gotchas and verbosity problems.
+- The `str.format` method introduces some useful concepts in its formatting specifiers mini language, but it otherwise repeats the mistakes of C-style format strings and should be avoided.
+- **F-strings** are a new syntax for formatting values into strings that solves the biggest problems with C-style format strings.
+- F-strings are succinct yet powerful because they allow for **arbitrary Python expressions** to be directly embedded within format specifiers.
