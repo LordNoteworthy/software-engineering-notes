@@ -112,3 +112,13 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - The `str.format` method introduces some useful concepts in its formatting specifiers mini language, but it otherwise repeats the mistakes of C-style format strings and should be avoided.
 - **F-strings** are a new syntax for formatting values into strings that solves the biggest problems with C-style format strings.
 - F-strings are succinct yet powerful because they allow for **arbitrary Python expressions** to be directly embedded within format specifiers.
+
+### Item 5: Write Helper Functions Instead of Complex Expressions
+
+- What you gain in **readability** always outweighs what **brevity** may have afforded you.
+
+📆 Things to Remember
+
+- Python’s syntax makes it easy to write single-line expressions that are overly complicated and difficult to read.
+- Move complex expressions into helper functions, especially if you need to use the same logic **repeatedly**.
+- An `if/else` expression provides a more readable alternative to using the `Boolean` operators `or` and `and` in expressions.
