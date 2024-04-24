@@ -938,7 +938,6 @@ std::cout << pp->name() << " was born on " << pp->birthDate() << " and now lives
   - objects derived from the Interface class must contain a virtual table pointer. This pointer may increase the amount of memory needed to store an object, depending on whether the Interface class is the exclusive source of virtual functions for the object.
 
 📆 Things to Remember
-
 - The general idea behind minimizing compilation dependencies is to depend on **declarations** instead of **definitions**. Two approaches based on this idea are **Handle classes** and **Interface classes**.
 - Library header files should exist in full and declaration-only forms. This applies regardless of whether templates are involved.
 
@@ -991,6 +990,40 @@ std::cout << pp->name() << " was born on " << pp->birthDate() << " and now lives
   ```
 
 📆 Things to Remember
-
 - Names in derived classes hide names in base classes. Under public inheritance, this is never desirable.
 - To make hidden names visible again, employ using declarations or forwarding functions.
+
+### Item 34: Differentiate between inheritance of interface and inheritance of implementation
+
+- When you define a **pure** virtual function `draw()`, you're basically saying: you **must** provide a **draw** function, but I have no idea how you're going to implement it.
+- For simple **impure** virtual function, the narrative changes a bit: you’ve got to support an `draw` function,
+but if you don’t want to write your own, you can fall back on the **default** version. However, it turns out that it can be **dangerous** to allow simple virtual functions to specify both a function interface and a default implementation.
+  - For example, `Airplane::fly` is declared virtual, the default flying behavior is provided as the body
+of `Airplane::fly`, which both *ModelA* and *ModelB* inherit.
+  - Now assumes we introduced a new *ModelC* which requires to be flown differently. And programmers forget  to redefine the `fly` function : 🤦.
+  - Fortunately, it’s easy to offer default behavior to derived classes but **not give it to them** unless they ask for it. The trick is to sever the connection between the interface of the virtual function and its default implementation. Here’s one way to do it:
+    ```cpp
+    class Airplane {
+    public:
+      virtual void fly(const Airport& destination) = 0;
+      ...
+    protected:
+      void defaultFly(const Airport& destination);
+    };
+
+    void Airplane::defaultFly(const Airport& destination) {
+      // default code for flying an airplane to the given destination
+    }
+    ```
+  - Some people object to the idea of having **separate** functions for providing interface and default implementation, such as `fly` and `defaultFly` above, because: it **pollutes** the class **namespace** with a proliferation of closely related function names.
+  - To solve this, we can take advantage of the fact that pure virtual functions must be redeclared in concrete derived classes, but they may also have implementations of their own.
+- With a **non-virtual** function, it specifies an *invariant over specialization*, because it identifies behavior that is **not** supposed to **change**, no matter how specialized a derived class becomes.
+- ⚠️ The first mistake is to declare **all functions non-virtual**. That leaves no room for **specialization** in derived classes; non-virtual destructors are particularly problematic.
+- ⚠️ The other common problem is to declare **all member functions virtual**. It serves no one to pretend
+that your class can be all things to all people if they’ll just take the time to redefine all your functions 🤷.
+
+📆 Things to Remember
+- Inheritance of **interface** is different from inheritance of **implementation**. Under public inheritance, derived classes always inherit base class interfaces.
+- **Pure** virtual functions specify inheritance of **interface only**.
+- **Simple** (impure) virtual functions specify inheritance of **interface** plus inheritance of a **default implementation**.
+- **Non-virtual** functions specify inheritance of **interface** plus inheritance of a **mandatory implementation**.
