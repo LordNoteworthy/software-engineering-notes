@@ -150,3 +150,21 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - 👍 Reduce visual noise and increase code clarity by using unpacking to avoid explicitly **indexing** into sequences.
 
 ### Item 7: Prefer enumerate Over range
+
+- Often, you’ll want to iterate over a list and also know the index of the current item in the list:
+   ```python
+      for i in range(len(flavor_list)):
+         flavor = flavor_list[i]
+         print(f'{i + 1}: {flavor}')
+   ```
+- `enumerate` wraps any iterator with a **lazy generator**.  `enumerate` yields **pairs** of the loop **index** and the **next value** from the given iterator.
+- Each pair yielded by enumerate can be succinctly **unpacked** in a for statement. The resulting code is much clearer:
+   ```python
+   for i, flavor in enumerate(flavor_list):
+      print(f'{i + 1}: {flavor}')
+   ```
+
+📆 Things to Remember
+- `enumerate` provides concise syntax for looping over an iterator and getting the index of each item from the iterator as you go.
+- Prefer `enumerate` instead of looping over a **range** and **indexing** into a sequence.
+- You can supply a second **parameter** to enumerate to specify the number from which to begin counting (zero is the default).
