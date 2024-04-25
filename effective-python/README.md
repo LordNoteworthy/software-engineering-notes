@@ -122,3 +122,31 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - Python’s syntax makes it easy to write single-line expressions that are overly complicated and difficult to read.
 - Move complex expressions into helper functions, especially if you need to use the same logic **repeatedly**.
 - An `if/else` expression provides a more readable alternative to using the `Boolean` operators `or` and `and` in expressions.
+
+### Item 6: Prefer Multiple Assignment Unpacking Over Indexing
+
+- Unpacking works when assigning to lists, sequences, and multiple levels of **arbitrary iterables** within iterables.
+   ```python
+   favorite_snacks = {
+      'salty': ('pretzels', 100),
+      'sweet': ('cookies', 180),
+      'veggie': ('carrots', 20),
+   }
+
+   ((type1, (name1, cals1)),
+   (type2, (name2, cals2)),
+   (type3, (name3, cals3))) = favorite_snacks.items
+   ```
+- Unpacking can even be used to **swap** values in place **without** the need to create **temporary** variables: `a[i-1], a[i] = a[i], a[i-1]`.
+- Another valuable application of unpacking is in the target list of `for` loops and similar constructs, such as comprehensions and generator expressions:
+   ```python
+   for rank, (name, calories) in enumerate(snacks, 1):
+      print(f'#{rank}: {name} has {calories} calories')
+   ```
+
+📆 Things to Remember
+- Python has special syntax called **unpacking** for assigning multiple values in a single statement.
+- Unpacking is generalized in Python and can be applied to any iterable, including many levels of iterables within iterables.
+- 👍 Reduce visual noise and increase code clarity by using unpacking to avoid explicitly **indexing** into sequences.
+
+### Item 7: Prefer enumerate Over range
