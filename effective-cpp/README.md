@@ -844,22 +844,22 @@ const Point *pUpperLeft = &(boundingBox(*pgo).upperLeft()); // get a ptr to the 
 
 - Inlining can be implicit or explicit:
   - The **implicit** way is to define a function inside a class definition:
-```cpp
-class Person {
-public:
-...
-  int age() const { return theAge; } // an implicit inline request: age is
-  ...                                // defined in a class definition
-private:
-  int theAge;
-};
-```
+  ```cpp
+  class Person {
+  public:
+  ...
+    int age() const { return theAge; } // an implicit inline request: age is
+    ...                                // defined in a class definition
+  private:
+    int theAge;
+  };
+  ```
   - The **explicit** way is to use the `inline` keyword:
-```cpp
-template<typename T>                              // an explicit inline
-inline const T& std::max(const T& a, const T& b)  // request: std::max is
-{ return a < b ? b : a; }                         // preceded by “inline”
-```
+  ```cpp
+  template<typename T>                              // an explicit inline
+  inline const T& std::max(const T& a, const T& b)  // request: std::max is
+  { return a < b ? b : a; }                         // preceded by “inline”
+  ```
 - Inlining is a **request** to the compiler, not a **command**.
   - Most compilers refuse to inline functions they deem too complicated (e.g., those that contain **loops** or are **recursive**),
   - Calls to **virtual functions** defy inlining.
@@ -1027,3 +1027,126 @@ that your class can be all things to all people if they’ll just take the time 
 - **Pure** virtual functions specify inheritance of **interface only**.
 - **Simple** (impure) virtual functions specify inheritance of **interface** plus inheritance of a **default implementation**.
 - **Non-virtual** functions specify inheritance of **interface** plus inheritance of a **mandatory implementation**.
+
+### Item 35: Consider alternatives to virtual functions.
+
+- The fundamental advice of this Item is to consider **alternatives** to **virtual functions** when searching for a design for the problem you’re trying to solve. Here’s a quick recap of the alternatives we examined:
+- Use the *non-virtual interface idiom* (NVI idiom), a form of the *Template Method* design pattern that **wraps public non-virtual** member functions around **less accessible** virtual functions.
+```cpp
+class GameCharacter {
+  public:
+    int healthValue() const // derived classes do not redefine this — see Item 36
+    {
+      ... // do “before” stuff — see below
+      int retVal = doHealthValue(); // do the real work
+      ... // do “after” stuff — see below
+      return retVal;
+    }
+    ...
+  private:
+    virtual int doHealthValue() const // derived classes may redefine this
+    {
+    ... // default algorithm for calculating character’s health
+    }
+};
+```
+  - An advantage of the NVI idiom is suggested by the *do before* stuff and *do ‘after stuff* comments in the code.
+  - Wrapper ensures that before a virtual function is called, the proper **context** is set up, and after the call is over, the context is cleaned up.
+- Replace virtual functions with **function pointer** data members, a stripped-down manifestation of the *Strategy design* pattern.
+  - Assert that calculating a character’s health is independent of the character’s type.
+  - Require that each character’s **constructor** be passed a **pointer** to a health calculation function.
+  ```cpp
+  class GameCharacter; // forward declaration
+  // function for the default health calculation algorithm
+  int defaultHealthCalc(const GameCharacter& gc);
+
+  class GameCharacter {
+    public:
+      typedef int (*HealthCalcFunc)(const GameCharacter&);
+      explicit GameCharacter(HealthCalcFunc hcf = defaultHealthCalc) : healthFunc(hcf ) {}
+      int healthValue() const {
+        return healthFunc(*this)
+      }
+    ...
+    private:
+      HealthCalcFunc healthFunc;
+  };
+  ```
+  - 👍 Different **instances** of the same character type can have different **health calculation** functions.
+  - 👍 Health calculation functions for a particular character may be **changed** at **runtime**.
+  - 👎 Works only as long as the health calculation function does not **requires non-public** information.
+  - 🤷 Whether the advantages of using a function pointer instead of a virtual function offset the possible need to decrease `GameCharacter’s` encapsulation is something you must decide on a design-by-design basis.
+- Replace virtual functions with `tr1::function` data members, thus allowing use of any callable entity with a signature compatible with what you need. This, too, is a form of the *Strategy design* pattern.
+  - Compared to the last design we saw (where `GameCharacter` held a pointer to a function), this design is almost the same. The only difference is that `GameCharacter` now holds a `tr1::function` object — a **generalized** pointer to a function.
+  ```cpp
+  class GameCharacter; // as before
+  int defaultHealthCalc(const GameCharacter& gc); // as before
+
+  class GameCharacter {
+    public:
+      // HealthCalcFunc is any callable entity that can be called with
+      // anything compatible with a GameCharacter and that returns anything
+      // compatible with an int; see below for details
+      typedef std::tr1::function<int (const GameCharacter&)> HealthCalcFunc;
+      explicit GameCharacter(HealthCalcFunc hcf = defaultHealthCalc) : healthFunc(hcf ) {}
+      int healthValue() const {
+        return healthFunc(*this);
+      }
+      ...
+    private:
+      HealthCalcFunc healthFunc;
+  };
+  ```
+  - Such objects may hold any **callable** entity (i.e., function pointer, function object, or member function pointer) whose signature is compatible with what is expected.
+  - 👍 Clients now have staggeringly more **flexibility** in specifying health calculation functions:
+  ```cpp
+  short calcHealth(const GameCharacter&); // health calculation function; note non-int return type
+  struct HealthCalculator { // class for health
+    int operator()(const GameCharacter&) const // calculation function
+    { ... } // objects
+  };
+  class GameLevel {
+  public:
+    float health(const GameCharacter&) const; // health calculation mem function; note non-int return type
+  };
+  class EvilBadGuy: public GameCharacter { // as before
+    ...
+  };
+  class EyeCandyCharacter: public GameCharacter { // another character type; assume same constructor as EvilBadGuy
+    ...
+  };
+
+  EvilBadGuy ebg1(calcHealth); // character using a health calculation function
+  EyeCandyCharacter ecc1(HealthCalculator()); // character using a health calculation function object
+  GameLevel currentLevel;
+  ...
+  // character using a health calculation member function see below for details;
+  EvilBadGuy ebg2(std::tr1::bind(&GameLevel::health, currentLevel,_1));
+  ```
+- Replace virtual functions in **one hierarchy** with virtual functions in **another hierarchy**. This is the conventional implementation of the *Strategy design* pattern.
+  ```cpp
+  class GameCharacter; // forward declaration
+  class HealthCalcFunc {
+    public:
+    ...
+    virtual int calc(const GameCharacter& gc) const { ... }
+    ...
+  };
+  HealthCalcFunc defaultHealthCalc;
+  class GameCharacter {
+  public:
+    explicit GameCharacter(HealthCalcFunc *phcf = &defaultHealthCalc) : pHealthCalc(phcf) {}
+    int healthValue() const {
+      return pHealthCalc->calc(*this);
+    }
+  ...
+  private:
+    HealthCalcFunc *pHealthCalc;
+  };
+  ```
+  - 👍 Has the appeal of being **quickly recognizable** to people familiar with the “*standard*” Strategy pattern implementation, plus it offers the possibility that an existing health calculation algorithm can be tweaked by adding a derived class to the `HealthCalcFunc` hierarchy.
+
+📆 Things to Remember
+- Alternatives to virtual functions include the **NVI idiom** and various forms of the **Strategy design** pattern. The NVI idiom is itself an example of the **Template Method** design pattern.
+- A disadvantage of moving functionality from a member function to a function outside the class is that the non-member function **lacks access** to the class’s non-public members.
+- `tr1::function` objects act like generalized function pointers. Such objects support all callable entities compatible with a given target signature.
