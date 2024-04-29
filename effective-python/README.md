@@ -168,3 +168,26 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - `enumerate` provides concise syntax for looping over an iterator and getting the index of each item from the iterator as you go.
 - Prefer `enumerate` instead of looping over a **range** and **indexing** into a sequence.
 - You can supply a second **parameter** to enumerate to specify the number from which to begin counting (zero is the default).
+
+### Item 8: Use zip to Process Iterators in Parallel
+
+- Python provides the zip built-in function. `zip` wraps two or more iterators with a lazy generator. The zip generator **yields tuples** containing the next value from each iterator:
+   ```python
+   for name, count in zip(names, counts):
+      if count > max_count:
+         longest_name = name
+         max_count = count
+   ```
+- If you don’t expect the lengths of the lists passed to zip to be **equal**, consider using the `zip_longest` function from the `itertools` built-in module instead:
+   ```python
+   for name, count in itertools.zip_longest(names, counts):
+      print(f'{name}: {count}')
+   ```
+
+📆 Things to Remember
+- The `zip` built-in function can be used to iterate over **multiple iterators** in parallel.
+- `zip` creates a lazy generator that produces tuples, so it can be used on infinitely **long** inputs.
+- `zip` truncates its output silently to the **shortest** iterator if you supply it with iterators of different lengths.
+- Use the `zip_longest` function from the `itertools` built-in module if you want to use `zip` on iterators of unequal lengths without truncation.
+
+### Item 9: Avoid else Blocks After for and while Loops
