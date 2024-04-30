@@ -1150,3 +1150,29 @@ class GameCharacter {
 - Alternatives to virtual functions include the **NVI idiom** and various forms of the **Strategy design** pattern. The NVI idiom is itself an example of the **Template Method** design pattern.
 - A disadvantage of moving functionality from a member function to a function outside the class is that the non-member function **lacks access** to the class’s non-public members.
 - `tr1::function` objects act like generalized function pointers. Such objects support all callable entities compatible with a given target signature.
+
+### Item 36: Never redefine an inherited non-virtual function.
+
+```cpp
+class B {
+  public:
+    void mf();
+};
+
+class D: public B {
+  public:
+    void mf(); // hides B::mf; see Item 33
+};
+pB->mf(); // calls B::mf
+pD->mf(); // calls D::mf
+```
+- **non-virtual** functions like `B::mf` and `D::mf` are **statically** bound, virtual functions, on the other hand, are **dynamically** bound !
+- If you are writing class `D` and you redefine a non-virtual function `mf` that you inherit from class `B`, `D` objects will likely exhibit **inconsistent behavior**. In particular, any given `D` object may act like **either** a `B` or a `D` when `mf` is called, and the determining factor will have nothing to do with the object itself, but with the declared **type of the pointer** that points to it. **References** exhibit the same baffling behavior as do pointers.
+- When you redefine an inherited non-virtual function, you violates ⚠️:
+  - Everything that applies to `B` objects also applies to `D` objects, because every `D` object *is-a* `B` object;
+  - Classes derived from `B` must inherit both the **interface** and the **implementation** of `mf`, because `mf` is non-virtual in `B`.
+
+📆 Things to Remember
+- Never redefine an inherited non-virtual function !
+
+### Item 37: Never redefine a function’s inherited default parameter value
