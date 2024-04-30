@@ -191,3 +191,24 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - Use the `zip_longest` function from the `itertools` built-in module if you want to use `zip` on iterators of unequal lengths without truncation.
 
 ### Item 9: Avoid else Blocks After for and while Loops
+
+- Given all the uses of `else`, `except`, and `finally` in Python, a new programmer might assume that the else part of `for/else `means “*Do this if the loop wasn’t completed*.” In reality, it does exactly the opposite.
+- Using a `break` statement in a loop actually **skips** the `else` block:
+   ```python
+   for i in range(3):
+      print('Loop', i)
+      if i == 1:
+         break
+      else:
+      print('Else block!')
+   ```
+- Another surprise is that the `else` block runs immediately if you loop over an **empty** sequence !
+- The `else` block also runs when `while` loops are initially `False`.
+- ▶️ The rationale for these behaviors is that `else` blocks after loops are useful when using loops to **search for something**.
+- 🤷 The **expressivity** you gain from the `else` block doesn’t **outweigh** the **burden** you put on people (including yourself) who want to understand your code in the future. Simple constructs like loops should be self-evident in Python.
+
+
+📆 Things to Remember
+- Python has special syntax that allows `else` blocks to immediately follow `for` and `while` loop interior blocks.
+- The `else` block after a **loop** runs only if the loop body did not encounter a **break** statement.
+- **Avoid** using `else` blocks after loops because their behavior isn’t intuitive and can be confusing.
