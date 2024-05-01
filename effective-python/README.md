@@ -207,8 +207,48 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - ▶️ The rationale for these behaviors is that `else` blocks after loops are useful when using loops to **search for something**.
 - 🤷 The **expressivity** you gain from the `else` block doesn’t **outweigh** the **burden** you put on people (including yourself) who want to understand your code in the future. Simple constructs like loops should be self-evident in Python.
 
-
 📆 Things to Remember
 - Python has special syntax that allows `else` blocks to immediately follow `for` and `while` loop interior blocks.
 - The `else` block after a **loop** runs only if the loop body did not encounter a **break** statement.
 - **Avoid** using `else` blocks after loops because their behavior isn’t intuitive and can be confusing.
+
+### Item 10: Prevent Repetition with Assignment Expressions
+
+- Normal assignment statements are written **a = b** and pronounced `a equals b,` these assignments are written `a := b` and pronounced **a walrus b**.
+- This pattern of **fetching** a value, checking to see if it’s **non-zero**, and then **using** it is extremely common in Python.
+   ```python
+   if count := fresh_fruit.get('lemon', 0): // assign and then evaluate
+      make_lemonade(count)
+   else:
+      out_of_stock()
+   ```
+- In the below example: tt's a lot more **readable** because it’s now clear that `count` is only relevant to the first block of the `if` statement.
+   ```python
+   if (count := fresh_fruit.get('apple', 0)) >= 4:
+      make_cider(count)
+   else:
+      out_of_stock()
+   ```
+- It also provides an elegant solution that can feel nearly as versatile as dedicated syntax for `switch/case` statements:
+   ```python
+   if (count := fresh_fruit.get('banana', 0)) >= 2:
+      pieces = slice_bananas(count)
+      to_enjoy = make_smoothies(pieces)
+   elif (count := fresh_fruit.get('apple', 0)) >= 4:
+      to_enjoy = make_cider(count)
+   else:
+      to_enjoy = 'Nothing'
+   ```
+- The walrus operator obviates the need for the *loop-and-a-half* idiom by allowing the `fresh_frui`t variable to be reassigned and then conditionally evaluated each time through the `while` loop:
+   ```python
+   bottles = []
+   while fresh_fruit := pick_fruit():
+   for fruit, count in fresh_fruit.items():
+      batch = make_juice(fruit, count)
+      bottles.extend(batch)
+   ```
+
+📆 Things to Remember
+- Assignment expressions use the **walrus** operator (`:=`) to both assign and evaluate variable names in a single expression, thus reducing **repetition**.
+- When an assignment expression is a subexpression of a larger expression, it must be surrounded with **parentheses**.
+- Although `switch/case` statements and `do/while` loops are not available in Python, their functionality can be emulated much more clearly by using assignment expressions.
