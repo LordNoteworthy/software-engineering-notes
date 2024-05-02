@@ -252,3 +252,19 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - Assignment expressions use the **walrus** operator (`:=`) to both assign and evaluate variable names in a single expression, thus reducing **repetition**.
 - When an assignment expression is a subexpression of a larger expression, it must be surrounded with **parentheses**.
 - Although `switch/case` statements and `do/while` loops are not available in Python, their functionality can be emulated much more clearly by using assignment expressions.
+
+## Lists and Dictionaries
+
+- Dictionaries (often called an *associative array* or a *hash table*) provide **constant time** performance for **assignments** and **accesses**, which means they are ideal for bookkeeping dynamic information.
+
+### Item 11: Know How to Slice Sequences
+
+- Slicing can be extended to any Python class that implements the `__getitem_`_` and `__setitem__` special methods.
+- The result of slicing a list is a whole new list.
+- ⚠️ If you assign to a slice with **no start or end indexes**, you replace the entire contents of the list with a copy of what’s **referenced** (instead of allocating a new list).
+
+📆 Things to Remember
+- Avoid being **verbose** when slicing: Don’t supply 0 for the start index or the length of the sequence for the end index.
+- Slicing is **forgiving of start or end** indexes that are out of bounds which means it’s easy to express slices on the front or back boundaries of a sequence (like a[:20] or a[-20:]).
+- Assigning to a list slice **replaces that range** in the original sequence with what’s referenced even if the lengths are different.
+
