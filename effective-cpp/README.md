@@ -1166,7 +1166,7 @@ class D: public B {
 pB->mf(); // calls B::mf
 pD->mf(); // calls D::mf
 ```
-- **non-virtual** functions like `B::mf` and `D::mf` are **statically** bound, virtual functions, on the other hand, are **dynamically** bound !
+- **Non-virtual** functions like `B::mf` and `D::mf` are **statically** (early) bound, virtual functions, on the other hand, are **dynamically** (late) bound !
 - If you are writing class `D` and you redefine a non-virtual function `mf` that you inherit from class `B`, `D` objects will likely exhibit **inconsistent behavior**. In particular, any given `D` object may act like **either** a `B` or a `D` when `mf` is called, and the determining factor will have nothing to do with the object itself, but with the declared **type of the pointer** that points to it. **References** exhibit the same baffling behavior as do pointers.
 - When you redefine an inherited non-virtual function, you violates ⚠️:
   - Everything that applies to `B` objects also applies to `D` objects, because every `D` object *is-a* `B` object;
@@ -1176,3 +1176,29 @@ pD->mf(); // calls D::mf
 - Never redefine an inherited non-virtual function !
 
 ### Item 37: Never redefine a function’s inherited default parameter value
+
+- An object’s **static type** is the type you declare it to have in the program text: `Shape *pc = new Circle; // static type = Shape*`.
+- Virtual functions are dynamically bound, but **default parameters are statically bound**.
+  - ▶️ That means you may end up invoking a virtual function defined in a derived class but using a default parameter value from a base class: `pr->draw(); // calls Rectangle::draw(Shape::Red)!`.
+- If you offer default parameter values to users of both base and derived classes ▶️ code duplication & if the default parameter value is changed in Shape, all derived classes that repeat it **must also be changed**.
+- Solution 🌟 ? Consider alternative to virtual functions such as **NVI idiom**:
+  ```cpp
+  class Shape {
+    public:
+      enum ShapeColor { Red, Green, Blue };
+      void draw(ShapeColor color = Red) { const // now non-virtual
+        doDraw(color); // calls a virtual
+      }
+    private:
+      virtual void doDraw(ShapeColor color) const = 0; // the actual work is done in this func
+  };
+  class Rectangle: public Shape {
+    public:
+      ...
+    private:
+      virtual void doDraw(ShapeColor color) const; // note lack of default param val.
+  };
+  ```
+
+📆 Things to Remember
+- Never **redefine an inherited default parameter value**, because default parameter values are statically bound, while virtual functions — the only functions you should be redefining — are dynamically bound.
