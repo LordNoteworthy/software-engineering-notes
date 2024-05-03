@@ -1202,3 +1202,56 @@ pD->mf(); // calls D::mf
 
 📆 Things to Remember
 - Never **redefine an inherited default parameter value**, because default parameter values are statically bound, while virtual functions — the only functions you should be redefining — are dynamically bound.
+
+### Item 38: Model “has-a” or “is-implemented-in-terms-of” through composition
+
+- **Composition** is the relationship between types that arises when objects of one type contain objects of another type. Among programmers, the term composition has lots of synonyms: *layering*, *containment*, *aggregation*, and *embedding*.
+- Some objects in your programs correspond to things in the world you are modeling, e.g., *people*, *vehicles*, *video frames*, etc. Such objects are part of the **application domain**.
+- Other objects are purely implementation artifacts, e.g., *buffers*, *mutexes*, *search trees*, etc. These kinds of objects correspond to your software’s **implementation domain**.
+- 🍎 A `Person` object has a *name*, an *address* (class), and voice and fax telephone numbers. You wouldn’t say that a person *is a* name or that a person *is an* address. You would say that a person *has a* name and *has an* address.
+- For example, suppose you need a template for classes representing fairly small sets of objects, i.e., collections without duplicates:
+  - One option is to use **linked lists**. You also know that the standard C++ library has a *list* template, so you decide to (re)use it (assuming *set* is out of option because it favors speed over space 🤓).
+  - You decide to have your nascent `Set` template **inherit** from list. That is, `Set<T>` will inherit from `list<T>`. After all, in your implementation, a `Set` object will in fact be a list object. You thus declare your Set template like this:
+    ```cpp
+    template<typename T> // the wrong way to use list for Set
+    class Set: public std::list<T> { ... };
+    ```
+  - Wrong ! It is untrue that a `Set` *is-a* list, because some of the things that are true for list objects are not true for `Set` objects (You can't have duplicates in a `Set`).
+  - Because the relationship between these two classes isn’t *is-a*, public inheritance is the wrong way to model that relationship. The right way is to realize that a `Set` object can be *implemented in terms of* a list object:
+    ```cpp
+    template<class T> // the right way to use list for Set
+    class Set {
+      public:
+        bool member(const T& item) const;
+        void insert(const T& item);
+        void remove(const T& item);
+        std::size_t size() const;
+      private:
+        std::list<T> rep; // representation for Set data
+    };
+    ```
+  - Set’s member functions can lean heavily on functionality already offered by list and other parts of the standard library:
+    ```cpp
+    template<typename T>
+    bool Set<T>::member(const T& item) const {
+      return std::find(rep.begin(), rep.end(), item) != rep.end();
+    }
+    template<typename T>
+    void Set<T>::insert(const T& item) {
+      if (!member(item)) rep.push_back(item);
+    }
+    template<typename T>
+    void Set<T>::remove(const T& item) {
+      // see Item 42 for info on “typename” here
+      typename std::list<T>::iterator it = std::find(rep.begin(), rep.end(), item);
+      if (it != rep.end()) rep.erase(it);
+    }
+    template<typename T>
+    std::size_t Set<T>::size() const {
+      return rep.size();
+    }
+    ```
+
+📆 Things to Remember
+- Composition has meanings completely different from that of public inheritance.
+- In the **application** domain, composition means *has-a*. In the **implementation** domain, it means *is-implemented-in-terms-of*.
