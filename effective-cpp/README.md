@@ -1255,3 +1255,58 @@ pD->mf(); // calls D::mf
 📆 Things to Remember
 - Composition has meanings completely different from that of public inheritance.
 - In the **application** domain, composition means *has-a*. In the **implementation** domain, it means *is-implemented-in-terms-of*.
+
+### Item 39: Use private inheritance judiciously.
+
+- In contrast to public inheritance, compilers will generally not convert a derived class object (such as `Student`) into a base class object (such as `Person`) if the inheritance relationship between the classes is private.
+- Members inherited from a private base class **become private** members of the derived class, even if they were **protected** or **public** in the base class.
+- Private inheritance means *is-implemented-in-terms-of*:
+  - If you make a class `D` privately inherit from a class `B`, you do so because you are interested in taking advantage of some of the features available in class `B`, not because there is any conceptual **relationship** between objects of types `B` and `D`.
+  - ▶️ As such, private inheritance is purely an **implementation** technique.
+- **Composition** can mean the same thing. How are you supposed to choose between them?
+  - 🌳 Use composition whenever you can, and use private inheritance whenever you must !
+- Example: Let's suppose we want to how often `Widget` member functions are called:
+  ```cpp
+  class Timer {
+    public:
+      explicit Timer(int tickFrequency);
+      virtual void onTick() const; // automatically called for each tick
+  };
+  ```
+    - **Public** inheritance is inappropriate in this case. It’s not true that a `Widget` *is-a* `Timer`.
+    - We thus inherit **privately**:
+      ```cpp
+      class Widget: private Timer {
+        private:
+          virtual void onTick() const; // look at Widget usage data, etc.
+      };
+      ```
+  - This is a nice design, but it’s worth noting that **private** inheritance isn’t strictly necessary. If we were determined to use **composition** instead, we could. We’d just declare a **private** **nested** class inside `Widget` that would **publicly** inherit from `Timer`, redefine `onTick` there, and put an object of that type inside `Widget`. Here’s a sketch of the approach:
+  ```cpp
+  class Widget {
+    private:
+      class WidgetTimer: public Timer {
+        public:
+          virtual void onTick() const;
+      };
+    WidgetTimer timer;
+  }
+  ```
+- Two reasons why you might prefer public inheritance plus composition over private inheritance:
+  1. You might want to design `Widget` to allow for derived classes, but you might also want to prevent derived classes from redefining `onTick`.
+  2. You might want to minimize `Widget’s` compilation dependencies.
+- C++’s edict against **zero-size freestanding** objects is typically satisfied by the silent insertion of a char into “empty” objects.
+  - This constraint **doesn’t apply** to base class parts of **derived class** objects, because they’re not freestanding. If you inherit from `Empty` instead of containing an object of that type:
+  ```cpp
+  class HoldsAnInt: private Empty {
+    private:
+      int x;
+  };
+  ```
+  - You’re almost sure to find that `sizeof(HoldsAnInt) == sizeof(int)`. This is known as the *empty base optimization (EBO)*.
+  - EBO is generally viable only under single inheritance.
+  - Examples from STL that benefits from EBO: `unary_function` and `binary_function`
+
+📆 Things to Remember
+- Private inheritance means *is-implemented-in-terms of*. It’s usually **inferior** to **composition**, but it makes sense when a derived class needs access to **protected base class members** or needs to redefine inherited virtual functions.
+- Unlike composition, private inheritance can enable the **empty base optimization**. This can be important for library developers who strive to **minimize** object sizes.
