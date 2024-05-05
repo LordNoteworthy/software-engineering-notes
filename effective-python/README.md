@@ -268,3 +268,28 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - Slicing is **forgiving of start or end** indexes that are out of bounds which means it’s easy to express slices on the front or back boundaries of a sequence (like a[:20] or a[-20:]).
 - Assigning to a list slice **replaces that range** in the original sequence with what’s referenced even if the lengths are different.
 
+### Item 12: Avoid Striding and Slicing in a Single Expression
+
+- In addition to basic slicing, Python has special syntax for the **stride** of a slice in the form `somelist[start : end : stride]`. This lets you take every `nth` item when slicing a sequence.
+-  For example, the stride makes it easy to group by even and odd indexes in a list:
+   ```python
+   x = ['red', 'orange', 'yellow', 'green', 'blue', 'purple']
+   odds = x[::2]
+   evens = x[1::2]
+   print(odds)
+   print(evens)
+   >>>
+   ['red', 'yellow', 'blue']
+   ['orange', 'green', 'purple']
+   ```
+- A common Python trick for **reversing** a byte string is to slice the string with a stride of `-1` (this also works correctly for **Unicode** strings):
+   ```python
+   x = b'mongoose'
+   y = x[::-1]
+   ```
+- ⚠️ But it will break when Unicode data is encoded as a **UTF-8** byte string !
+
+📆 Things to Remember
+- Specifying start, end, and stride in a slice can be extremely **confusing**.
+- Prefer using **positive** stride values in slices **without start** or **end** indexes. **Avoid negative** stride values if possible.
+- Avoid using start, end, and stride **together** in a **single** slice. If you need all three parameters, consider doing two assignments (one to stride and another to slice) or using `islice` from the `itertools` built-in module
