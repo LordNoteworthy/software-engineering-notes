@@ -292,4 +292,59 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 📆 Things to Remember
 - Specifying start, end, and stride in a slice can be extremely **confusing**.
 - Prefer using **positive** stride values in slices **without start** or **end** indexes. **Avoid negative** stride values if possible.
-- Avoid using start, end, and stride **together** in a **single** slice. If you need all three parameters, consider doing two assignments (one to stride and another to slice) or using `islice` from the `itertools` built-in module
+- Avoid using start, end, and stride **together** in a **single** slice. If you need all three parameters, consider doing two assignments (one to stride and another to slice) or using `islice` from the `itertools` built-in module.
+
+### Item 13: Prefer Catch-All Unpacking Over Slicing
+
+- Consider the example below:
+   ```python
+   oldest = car_ages_descending[0]
+   second_oldest = car_ages_descending[1]
+   others = car_ages_descending[2:]
+   print(oldest, second_oldest, others)
+   >>>
+   20 19 [15, 9, 8, 7, 6, 4, 1, 0]
+   ```
+   - 👎 Indexing and slicing is **visually noisy**, and also error prone because of **off-by-one** errors.
+- To better handle this situation, Python supports **catch-all unpacking** through a *starred expression*:
+   ```python
+   oldest, second_oldest, *others = car_ages_descending
+   ```
+- A starred expression may appear in **any position**, so you can get the benefits of catch-all unpacking anytime you need to extract one slice:
+  ```python
+   oldest, *others, youngest = car_ages_descending
+   print(oldest, youngest, others)
+   *others, second_youngest, youngest = car_ages_descending
+   print(youngest, second_youngest, others)
+   >>>
+   20 0 [19, 15, 9, 8, 7, 6, 4, 1]
+   0 1 [20, 19, 15, 9, 8, 7, 6, 4]
+   ```
+- You also can’t use **multiple catch-all** expressions in a **single-level** unpacking pattern: `first, *middle, *second_middle, last = [1, 2, 3, 4]` but:
+  - It is possible to use multiple starred expressions in an unpacking assignment statement, as long as they’re catch-alls for **different parts** of the multilevel structure being unpacked:
+   ```python
+   ((loc1, (best1, *rest1)),
+   (loc2, (best2, *rest2))) = car_inventory.items()
+   ```
+- Starred expressions become **list** instances in all cases. If there are **no leftover** items from the sequence being unpacked, the catch-all part will be an **empty list**.
+- You can also unpack arbitrary **iterators** with the unpacking syntax:
+   ```python
+   it = iter(range(1, 3))
+   first, second = it
+   ```
+   - Unpacking with a starred expression makes it easy to process the **first row** — the header — separately from the rest of the iterator’s contents. This is much clearer:
+   ```python
+   it = generate_csv()
+   header, *rows = it
+   print('CSV Header:', header)
+   print('Row count: ', len(rows))
+   >>>
+   CSV Header: ('Date', 'Make', 'Model', 'Year', 'Price')
+   Row count: 200
+   ```
+
+
+📆 Things to Remember
+- **Unpacking assignments** may use a **starred** expression to catch all values that weren’t assigned to the other parts of the unpacking pattern into a list.
+- **Starred expressions** may appear in any position, and they will always become a list containing the zero or more values they receive.
+- When dividing a list into non-overlapping pieces, **catch-all unpacking** is much **less error prone** than **slicing and indexing**.
