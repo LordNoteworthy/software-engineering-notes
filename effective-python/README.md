@@ -253,7 +253,7 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - When an assignment expression is a subexpression of a larger expression, it must be surrounded with **parentheses**.
 - Although `switch/case` statements and `do/while` loops are not available in Python, their functionality can be emulated much more clearly by using assignment expressions.
 
-## Lists and Dictionaries
+## Chapter 2: Lists and Dictionaries
 
 - Dictionaries (often called an *associative array* or a *hash table*) provide **constant time** performance for **assignments** and **accesses**, which means they are ideal for bookkeeping dynamic information.
 
@@ -343,8 +343,40 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
    Row count: 200
    ```
 
-
 📆 Things to Remember
 - **Unpacking assignments** may use a **starred** expression to catch all values that weren’t assigned to the other parts of the unpacking pattern into a list.
 - **Starred expressions** may appear in any position, and they will always become a list containing the zero or more values they receive.
 - When dividing a list into non-overlapping pieces, **catch-all unpacking** is much **less error prone** than **slicing and indexing**.
+
+### Item 14: Sort by Complex Criteria Using the key Parameter
+
+- Use the **lambda** keyword to define a function for the `key` parameter that enables me to sort the list of `Tool` objects alphabetically by their name:
+   ```python
+   print('Unsorted:', repr(tools))
+   tools.sort(key=lambda x: x.name)
+   print('\nSorted: ', tools)
+   ```
+- Sometimes you may need to use **multiple criteria** for sorting. For example, say that I have a list of power tools and I want to sort them first by weight and then by name.
+  - 👍 The simplest solution is to use the *tuple* type.
+    - Tuples are **comparable** by default and have a **natural ordering**, meaning that they implement all of the special methods, such as `__lt__`, that are required by the `sort` method.
+        ```python
+        saw = (5, 'circular saw')
+        jackhammer = (40, 'jackhammer')
+        assert not (jackhammer < saw) # Matches expectations
+        ```
+   - Another solution would be to define a key function that returns a tuple containing the two attributes that I want to sort on in order of priority: `power_tools.sort(key=lambda x: (x.weight, x.name))`.
+     - One limitation of this method is that the direction of sorting for all criteria **must be the same* (either all in ascending order, or all in descending order) 🤷.
+     - For **numerical** values, it’s possible to mix sorting directions by using the *unary minus* operator in the key function: `power_tools.sort(key=lambda x: (-x.weight, x.name))`.
+     - For **non numerical** types, call sort **multiple times** on the same list to combine different criteria together. Here, I produce the same sort ordering of weight descending and name ascending as I did above but by using two separate calls to sort:
+      ```python
+      power_tools.sort(key=lambda x: x.name) # Name ascending
+      power_tools.sort(key=lambda x: x.weight, reverse=True) # Weight descending
+      ```
+      - ⚠️ Make sure that you execute the sorts in the **opposite sequence** of what you want the final list to contain.
+
+📆 Things to Remember
+- The `sort` method of the list type can be used to rearrange a list’s contents by the natural ordering of built-in types like *strings*, *integers*, *tuples*, and so on.
+- The `sort` method doesn’t work for **objects** unless they **define** a natural ordering using **special methods**, which is uncommon.
+- The `key` parameter of the `sort` method can be used to supply a helper function that returns the value to use for sorting in place of each item from the list.
+- **Returning a tuple** from the key function allows you to combine multiple sorting criteria together. The *unary minus* operator can be used to **reverse** individual sort orders for types that allow it.
+- For types that can’t be negated, you can combine many sorting criteria together by calling the `sort` method **multiple times** using different key functions and reverse values, in the order of lowest rank sort call to highest rank sort call.
