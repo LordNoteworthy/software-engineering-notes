@@ -1282,16 +1282,16 @@ pD->mf(); // calls D::mf
       };
       ```
   - This is a nice design, but it’s worth noting that **private** inheritance isn’t strictly necessary. If we were determined to use **composition** instead, we could. We’d just declare a **private** **nested** class inside `Widget` that would **publicly** inherit from `Timer`, redefine `onTick` there, and put an object of that type inside `Widget`. Here’s a sketch of the approach:
-  ```cpp
-  class Widget {
-    private:
-      class WidgetTimer: public Timer {
-        public:
-          virtual void onTick() const;
-      };
-    WidgetTimer timer;
-  }
-  ```
+    ```cpp
+    class Widget {
+      private:
+        class WidgetTimer: public Timer {
+          public:
+            virtual void onTick() const;
+        };
+      WidgetTimer timer;
+    }
+    ```
 - Two reasons why you might prefer public inheritance plus composition over private inheritance:
   1. You might want to design `Widget` to allow for derived classes, but you might also want to prevent derived classes from redefining `onTick`.
   2. You might want to minimize `Widget’s` compilation dependencies.
@@ -1310,3 +1310,65 @@ pD->mf(); // calls D::mf
 📆 Things to Remember
 - Private inheritance means *is-implemented-in-terms of*. It’s usually **inferior** to **composition**, but it makes sense when a derived class needs access to **protected base class members** or needs to redefine inherited virtual functions.
 - Unlike composition, private inheritance can enable the **empty base optimization**. This can be important for library developers who strive to **minimize** object sizes.
+
+### Item 40: Use multiple inheritance judiciously
+
+- Multiple inheritance just means inheriting from more than one base class, but it is not uncommon for MI to be found in hierarchies that have higher-level base classes, too. That can lead to what is sometimes known as the “*deadly MI diamond*”: <p align="center"><img src="assets/deadly-mi-diamond.png" width="500px" height="auto"></p>
+- Any time you have an inheritance hierarchy with more than one path between a base class and a derived class, you must confront the ❓ of whether you want the data members in the base class to be **replicated** for each of the paths.
+- C++ takes no position on this debate. It happily supports both options, though its **default** is to perform the **replication**. If that’s not what you want, you must make the class with the data (i.e., File) a **virtual base class**. To do that, you have all classes that immediately inherit from it use virtual inheritance: <p align="center"><img src="assets/virtual-inheritance.png" width="500px" height="auto"></p>
+- From the viewpoint of **correct behavior**, public inheritance should always be virtual. But it comes with a cost 🤷:
+  - Objects created from classes using virtual inheritance are generally **larger**.
+  - Access to data members in virtual base classes is also **slower**.
+  - Rules governing the initialization of virtual base classes are more complicated and less intuitive than are those for non-virtual bases.
+    - So ? try to avoid putting data in them.
+- Below in one of reasonable applications of MI: combine public inheritance of an interface with private inheritance of an implementation:
+  - `IPerson` is an C++ Interface class for modeling persons.
+  - To create objects that can be manipulated as `IPerson` objects, clients of `IPerson` use **factory functions**  to instantiate concrete classes derived from `IPerson`. Suppose this class is called `CPerson`.
+  - Also, 🤓 suppose an old database-specific class `PersonInfo` offers the essence of what `CPerson` needs. ▶️ Their relationship is thus *is-implemented-in-terms of*.
+    ```cpp
+    class IPerson { // this class specifies the
+      public: // interface to be implemented
+        virtual ~IPerson();
+        virtual std::string name() const = 0;
+        virtual std::string birthDate() const = 0;
+    };
+
+    class DatabaseID { ... }; // used below; details are unimportant
+
+    // this class has functions useful in implementing the IPerson interface
+    class PersonInfo {
+      public:
+        explicit PersonInfo(DatabaseID pid);
+        virtual ~PersonInfo();
+        virtual const char * theName() const;
+        virtual const char * theBirthDate() const;
+      ...
+      private:
+        virtual const char * valueDelimOpen() const;
+        virtual const char * valueDelimClose() const;
+      ...
+    };
+
+    class CPerson: public IPerson, private PersonInfo { // note use of MI
+      public:
+        explicit CPerson(DatabaseID pid): PersonInfo(pid) {}
+        // implementations of the required IPerson member functions.
+        virtual std::string name() const {
+          return PersonInfo::theName();
+        }
+        virtual std::string birthDate() const {
+          return PersonInfo::theBirthDate();
+        }
+      private:
+        // redefinitions of inherited virtual delimiter functions.
+        const char * valueDelimOpen() const { return ""; }
+        const char * valueDelimClose() const { return ""; }
+    };
+    ```
+- 👍 Compared to **single inheritance**, it’s typically more **complicated** to **use** and more complicated to **understand**, so if you’ve got an SI design that’s more or less equivalent to an MI design, the SI design is almost certainly preferable.
+- There’s almost certainly some way to make SI work. At the same time, MI is sometimes the **clearest**, most **maintainable**, most reasonable way to get the job done. When that’s the case, don’t be afraid to use it. Just be sure to use it **judiciously**.
+
+📆 Things to Remember
+- Multiple inheritance is more complex than single inheritance. It can lead to new **ambiguity** issues and to the need for **virtual inheritance**.
+- Virtual inheritance imposes **costs** in size, speed, and complexity of **initialization** and **assignment**. It’s most practical when virtual base classes have **no data**.
+- Multiple inheritance does have legitimate uses. One scenario involves combining public inheritance from an Interface class with private inheritance from a class that helps with implementation.
