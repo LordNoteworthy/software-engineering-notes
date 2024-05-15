@@ -422,3 +422,76 @@ class that preserves insertion ordering.
   - Write code that doesn’t rely on insertion ordering 🤷.
   - Explicitly **check** for the dict type at **runtime**.
   - Require dict values using **type annotations** and **static analysis**.
+
+### Item 16: Prefer get Over in and KeyError to Handle Missing Dictionary Keys
+
+- Using `in` requires accessing the key two times:
+   ```python
+   key = 'wheat'
+   if key in counters:
+      count = counters[key]
+   else:
+      count = 0
+   counters[key] = count + 1
+   ```
+- Using the exceptions' approach is more efficient because it requires only one access and one assignment:
+   ```python
+   try:
+      count = counters[key]
+   except KeyError:
+      count = 0
+   counters[key] = count + 1
+   ```
+- This flow of fetching a key that exists or returning a default value is so common that the dict built-in type provides the `get` method to accomplish this task:
+   ```python
+   count = counters.get(key, 0)
+   counters[key] = count + 1
+   ```
+- `setdefault` is superfluous for cases like this because it requires one access and two assignments:
+   ```python
+   count = counters.setdefault(key, 0)
+   counters[key] = count + 1
+   ```
+- What if the values of the dictionary are a more **complex** type, like a `list`?:
+   ```python
+   votes = {
+      'baguette': ['Bob', 'Alice'],
+      'ciabatta': ['Coco', 'Deb'],
+   }
+   key = 'brioche'
+   who = 'Elmer'
+   if key in votes:
+      names = votes[key]
+   else:
+      votes[key] = names = [] # the list is modified by reference.
+   names.append(who)
+   ```
+- Relying on the `in` expression requires two accesses if the key is present, or one access and one assignment if the key is missing.
+-  Using the exceptions' approach requires one key access if the key is present, or one key access and one assignment if it’s missing, which makes it more efficient than the in condition:
+   ```python
+   try:
+      names = votes[key]
+   except KeyError:
+      votes[key] = names = []
+   ```
+- Same thing for the `get` method:
+   ```python
+   if (names := votes.get(key)) is None:
+      votes[key] = names = []
+   names.append(who)
+   ```
+- The dict type also provides the `setdefault` method to help shorten this pattern even further:
+   ```python
+   names = votes.setdefault(key, [])
+   names.append(who)
+   ```
+   - 👎 Readability of this approach isn’t ideal.
+   - Why is it `set` when what it’s doing is getting a value? Why not call it `get_or_set`? 🤷.
+   - ⚠️ The default value passed to `setdefault` is assigned **directly** into the dictionary when the key is missing instead of being copied.
+- There are only a few circumstances in which using `setdefault` is the shortest way to handle missing dictionary keys, such as when the default values are cheap to construct, mutable, and there’s no potential for raising exceptions (e.g., list instances). Check `defaultdict` in next item 🦊.
+
+📆 Things to Remember
+- There are four common ways to detect and handle missing keys in dictionaries: using `in` expressions, `KeyError` exceptions, the `get` method, and the `setdefault` method.
+- The `get` method is best for dictionaries that contain **basic** types like **counters**, and it is preferable along with assignment expressions when creating dictionary values has a high cost or may raise
+exceptions.
+- When the `setdefault` method of dict seems like the best fit for your problem, you should consider using `defaultdict` instead.
