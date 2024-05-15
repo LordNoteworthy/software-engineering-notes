@@ -380,3 +380,45 @@ Python Enhancement Proposal #8, otherwise known as **PEP 8**, is the style guide
 - The `key` parameter of the `sort` method can be used to supply a helper function that returns the value to use for sorting in place of each item from the list.
 - **Returning a tuple** from the key function allows you to combine multiple sorting criteria together. The *unary minus* operator can be used to **reverse** individual sort orders for types that allow it.
 - For types that can’t be negated, you can combine many sorting criteria together by calling the `sort` method **multiple times** using different key functions and reverse values, in the order of lowest rank sort call to highest rank sort call.
+
+### Item 15: Be Cautious When Relying on dict Insertion Ordering
+
+- Python 3.5 and before, iterating over a dict would return keys in arbitrary order.
+  - Why ? The dictionary type implemented its hash table algorithm with a combination of the hash built-in function and a **random seed** that was assigned when the Python **interpreter started**.
+- The way that dictionaries preserve insertion ordering is now part of the Python (3.7) language specification.
+  - `.keys(), .values(), .items(), .popitem()`.
+  - The order of **keyword arguments**: `my_func(**kwargs)`.
+  - **Object fields** in classes also use the dict type for their instance dictionaries:
+      ```python
+      a = MyClass()
+      for key, value in a.__dict__.items():
+         print('%s = %s' % (key, value))
+      ```
+- ⭐ For a long time the `collections` built-in module has had an `OrderedDict`
+class that preserves insertion ordering.
+   - Although this class’s behavior is similar to that of the standard dict type (since Python 3.7), the **performance** characteristics of `OrderedDict` are quite different.
+   -  If you need to handle a **high rate of key insertions** and `popitem` calls (e.g., to implement a least-recently-used cache), `OrderedDict` may be a better fit !
+- ⚠️ Example of a class that conforms to the protocol of a standard dictionary but won't preserve the order:
+   ```python
+   from collections.abc import MutableMapping
+
+   class SortedDict(MutableMapping):
+      def __init__(self): self.data = {}
+      def __getitem__(self, key): return self.data[key]
+      def __setitem__(self, key, value): self.data[key] = value
+      def __delitem__(self, key): del self.data[key]
+      def __len__(self): return len(self.data)
+      def __iter__(self):
+         keys = list(self.data.keys())
+         keys.sort()
+         for key in keys:
+            yield key
+   ```
+
+📆 Things to Remember
+- Since Python 3.7, you can rely on the fact that **iterating a dict** instance’s contents will occur in the **same order** in which the keys were initially added.
+- Python makes it easy to define objects that act like dictionaries but that aren’t dict instances. For these types, you **can’t assume** that insertion ordering will be **preserved**.
+- There are three ways to be careful about dictionary-like classes:
+  - Write code that doesn’t rely on insertion ordering 🤷.
+  - Explicitly **check** for the dict type at **runtime**.
+  - Require dict values using **type annotations** and **static analysis**.
