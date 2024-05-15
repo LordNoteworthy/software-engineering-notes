@@ -158,12 +158,12 @@ class Empty {
 public:
   Empty() { ... } // default constructor
   Empty(const Empty& rhs) { ... } // copy constructor
-  ~Empty() { ... } // destructor — see below // for whether it’s virtual
+  ~Empty() { ... } // destructor
   Empty& operator=(const Empty& rhs) { ... } // copy assignment operator
 };
 ```
 - ⚠️ If you’ve carefully engineered a class to require constructor arguments, you don’t have to worry about compilers **overriding** your decision by blithely adding a constructor that takes no arguments.
-- Compilers will refuse to generate an implicit operator= for your class if the resulting code has a reasonable chance of making sense, for example:
+- Compilers will refuse to generate an implicit `operator=` for your class if the resulting code has a reasonable chance of making sense, for example:
   - classes containing **references** members
   - classes containing **const** members
   - **derived** classes that inherit from base classes declaring the **copy** assignment operator **private**.
@@ -173,7 +173,7 @@ public:
 
 ### Item 6: Explicitly disallow the use of compiler-generated functions you do not want
 
-- By declaring a member function explicitly, you prevent compilers from generating their own version, and by making the function private, you keep people from calling it
+- By declaring a member function **explicitly**, you prevent compilers from generating their own version, and by making the function `private`, you keep people from calling it.
 ```cpp
 class HomeForSale {
 public:
@@ -184,7 +184,7 @@ private:
   HomeForSale& operator=(const HomeForSale&);
 };
 ```
-- It’s possible to move the **link-time** error up to **compile time** (:+1: always a good thing — earlier error detection is better than later) by declaring the copy constructor and copy assignment operator **private** not in `HomeForSale` itself, but in a **base** class specifically designed to prevent copying.
+- It’s possible to move the **link-time** error up to **compile time** (👍 always a good thing — earlier error detection is better than later) by declaring the copy **constructor** and copy **assignment** operator **private** not in `HomeForSale` itself, but in a **base** class specifically designed to prevent copying.
 - The base class is simplicity itself:
 ```cpp
 class Uncopyable {
@@ -200,7 +200,7 @@ private: // ...but prevent copying
 - To keep `HomeForSale` objects from being copied, all we have to do now is inherit from `Uncopyable`:
 ```cpp
 class HomeForSale: private Uncopyable {
-// class no longer declares copy ctor or copy assign. operator
+// class no longer declares copy ctor or copy assignment operator
 ...
 };
 ```
@@ -228,7 +228,7 @@ delete ptk; // now behaves correctly
 class SpecialString: public std::string { // bad idea! std::string has a non-virtual destructor
 };
 ```
-- The same analysis applies to any class lacking a virtual destructor, including all the *STL* container types (e.g., vector, list, set, tr1::unordered_map, etc.).
+- The same analysis applies to any class lacking a virtual destructor, including all the *STL* container types (e.g., `vector`, `list`, `set`, `tr1::unordered_map`, etc.).
 
 📆 Things to Remember
 - **Polymorphic** base classes should declare **virtual destructors**. If a class has any virtual functions, it should have a virtual destructor.
@@ -1372,3 +1372,53 @@ pD->mf(); // calls D::mf
 - Multiple inheritance is more complex than single inheritance. It can lead to new **ambiguity** issues and to the need for **virtual inheritance**.
 - Virtual inheritance imposes **costs** in size, speed, and complexity of **initialization** and **assignment**. It’s most practical when virtual base classes have **no data**.
 - Multiple inheritance does have legitimate uses. One scenario involves combining public inheritance from an Interface class with private inheritance from a class that helps with implementation.
+
+## Chapter 7: Templates and Generic Programming
+
+- The initial motivation for C++ templates was to make it possible to **create type-safe containers** like `vector`, `list`, and `map`.
+- But the ability to write code that is independent of the types of objects being manipulated was even better ▶️ STL algorithms like `for_each`, `find`, and `merge` 🌝.
+- It was discovered that the C++ template mechanism is itself *Turing-complete*. That led to **template meta-programming**: the creation of programs that execute inside C++ compilers and that stop running when compilation is complete 🚀.
+
+### Item 41: Understand implicit interfaces and compile-time polymorphism.
+
+- **Explicit interfaces** (**runtime** polymorphism. ie *virtual functions* and pointers/references):
+  ```cpp
+  class Widget {
+  public:
+    Widget();
+    virtual ~Widget();
+    virtual std::size_t size() const;
+    virtual void normalize();
+    void swap(Widget& other); // see Item 25
+  };
+  // and this (equally meaningless) function,
+  void doProcessing(Widget& w) {
+    if (w.size() > 10 && w != someNastyWidget) {
+      Widget temp(w);
+      temp.normalize();
+      temp.swap(w);
+    }
+  }
+  ```
+- **Implicit interfaces** (**compile-time** polymorphism. ie. *templates*):
+```cpp
+template<typename T>
+void doProcessing(T& w) {
+  if (w.size() > 10 && w != someNastyWidget) {
+    T temp(w);
+    temp.normalize();
+    temp.swap(w);
+  }
+}
+```
+- An implicit interface is quite different. It is not based on **function signatures**. Rather, it consists of **valid expressions**.
+  - Looking again at the conditional at the beginning of the `doProcessing` template. The implicit interface for `T` (w’s type) appears to have these constraints:
+    - It must offer a member function named `size` that returns an object of some type `X` such that there is an `operator>` that can be called with an object of type `X` and an `int`. In fact, it could take a parameter of type `Y`, and that would be okay as long as there were an **implicit** conversion from objects of type `X` to objects of type `Y` 😮‍💨 !
+    - It must support an `operator!=` function that compares two objects of type `T`. (Here, we assume that `someNastyWidget` is of type `T`.).
+    - The conditional part of an `if` statement must be a **boolean** expression, so regardless of the exact types involved, whatever “`w.size() > 10 && w != someNastyWidget`” yields, it must be compatible with bool.
+  - The rest of the interface required by `doProcessing` is that calls to the **copy constructor**, to `normalize`, and to `swap` must be valid for objects of type `T`.
+
+📆  Things to Remember
+- Both classes and templates support interfaces and polymorphism.
+- For classes, **interfaces** are **explicit** and centered on function **signatures**. Polymorphism occurs at **runtime** through **virtual functions**.
+- For template parameters, interfaces are **implicit** and based on valid **expressions**. Polymorphism occurs during **compilation** through **template instantiation** and **function overloading resolution**.
