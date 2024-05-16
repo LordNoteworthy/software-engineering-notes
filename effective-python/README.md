@@ -495,3 +495,46 @@ class that preserves insertion ordering.
 - The `get` method is best for dictionaries that contain **basic** types like **counters**, and it is preferable along with assignment expressions when creating dictionary values has a high cost or may raise
 exceptions.
 - When the `setdefault` method of dict seems like the best fit for your problem, you should consider using `defaultdict` instead.
+
+### Item 17: Prefer defaultdict Over setdefault to Handle Missing Items in Internal State
+
+- For example, say that I want to keep track of the cities I’ve visited in countries around the world. Here, I do this by using a dictionary that maps country names to a set instance containing corresponding city names:
+   ```python
+   visits = {
+      'Mexico': {'Tulum', 'Puerto Vallarta'},
+      'Japan': {'Hakone'},
+   }
+
+   visits.setdefault('France', set()).add('Arles') # Short
+   ## OR
+   if (japan := visits.get('Japan')) is None: # Long
+      visits['Japan'] = japan = set()
+   japan.add('Kyoto')
+   ```
+- What about the situation when you do control creation of the dictionary being accessed?:
+   ```python
+   class Visits:
+      def __init__(self):
+         self.data = {}
+      def add(self, country, city):
+         city_set = self.data.setdefault(country, set())
+         city_set.add(city)
+   ```
+      - 👎 The `setdefault` method is still **confusingly named**, which makes it more difficult for a new reader of the code to immediately understand what’s happening.
+      - 👎 And the implementation isn’t efficient because it **constructs a new set instance on every call**, regardless of whether the given country was already present in the data dictionary.
+- Luckily, the `defaultdict` class from the `collections` built-in module simplifies this common use case by automatically storing a default value when a key doesn’t exist. All you have to do is provide a function that will return the default value to use each time a key is missing . Here, I rewrite the `Visits` class to use `defaultdict`:
+   ```python
+   from collections import defaultdict
+
+   class Visits:
+   def __init__(self):
+      self.data = defaultdict(set)
+   def add(self, country, city):
+      self.data[country].add(city)
+   ```
+- 👍 The code can assume that accessing any key in the data dictionary will always result in an existing set instance. No superfluous set instances will be allocated every time, which could be costly if the add method is called a large
+number of times.
+
+📆 Things to Remember
+- If you’re creating a dictionary to manage an arbitrary set of potential keys, then you should prefer using a `defaultdict` instance from the `collections` built-in module if it suits your problem.
+- If a dictionary of arbitrary keys is passed to you, and you **don’t control its creation**, then you should prefer the `get` method to access its items. However, it’s worth considering using the `setdefault` method for the few situations in which it leads to shorter code.
