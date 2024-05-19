@@ -1,6 +1,6 @@
 # Effective Python
 
-notes taken from reading the Effective Python: 90 Specific Ways To Write Better Python, Second Edition by Brett Slatkin.
+notes taken from reading the Effective Python: 90 Specific Ways To Write Better Python, Second Edition by *Brett Slatkin*.
 
 ## Chapter 1: Pythonic Thinking
 
@@ -579,3 +579,6 @@ number of times.
 - The `setdefault` method of `dict` is a bad fit when creating the default value has high computational cost or may raise exceptions.
 - The function passed to `defaultdict` must not require any arguments, which makes it impossible to have the default value depend on the key being accessed.
 - You can define your own `dict` subclass with a `__missing__` method in order to construct default values that must know which key was being accessed.
+
+## Chapter 3: Functions
+

@@ -1477,3 +1477,53 @@ void workWithIterator(IterT iter) {
 📆 Things to Remember
 - When declaring template parameters, `class` and `typename` are **interchangeable**.
 - Use `typename` to identify **nested dependent** type names, except in base class lists or as a base class identifier in a member initialization list.
+
+### Item 43: Know how to access names in templatized base classes
+
+- Assume the following classes:
+  ```cpp
+  class CompanyA {
+  public:
+    ...
+    void sendCleartext(const std::string& msg);
+    void sendEncrypted(const std::string& msg);
+    ...
+  };
+  class CompanyB {
+  public:
+    ...
+    void sendCleartext(const std::string& msg);
+    void sendEncrypted(const std::string& msg);
+    ...
+  };
+  ... // classes for other companies
+  class MsgInfo { ... }; // class for holding information used to create a message
+  ```
+- Suppose we sometimes want to log some information each time we send a message. A derived class can easily add that capability, and this seems like a reasonable way to do it:
+  ```cpp
+  template<typename Company>
+  class LoggingMsgSender: public MsgSender<Company> {
+    public:
+      ... // ctors, dtor, etc.
+      void sendClearMsg(const MsgInfo& info)
+      {
+        write "before sending" info to the log;
+        sendClear(info); // call base class function; this code will not compile!
+        write "after sending" info to the log;
+      }
+      ...
+  }
+  ```
+- Compilers will complain that `sendClear` doesn’t exist. We can see that `sendClear` is in the **base class**, but compilers won’t look for it there 🤷.
+- The problem is that when compilers encounter the definition for the class template `LoggingMsgSender`, they don’t know what class it inherits from (until later when `LoggingMsgSender` is instantiated).
+- Generally, C++ refuses to look in **templatized base classes** for **inherited** names. In some sense, when we cross from OO C++ to Template C++, inheritance stops working 😮‍💨.
+- To solve that, we can use any of the approaches below to promise compilers that any subsequent specializations of the base class template will support the interface offered by the general template:
+  - First, you can preface calls to base class functions with “`this->`”: `this->sendClear(info);`.
+  - Second, you can employ a `using` declaration (which bring hidden base class names into a derived class’s scope): `using MsgSender<Company>::sendClear;` then `sendClear(info);`
+  - A final way to get your code to compile is to **explicitly** specify that the function being called is in the base class: `MsgSender<Company>::sendClear(info);`.
+    - This is generally the **least desirable** way to solve the problem, because if the function being called is **virtual**, explicit qualification turns off the virtual binding behavior.
+
+📆 Things to Remember
+- In derived class templates, refer to names in base class templates via a “`this->`” prefix, via `using` declarations, or via an **explicit** base class qualification.
+
+### Item 44: Factor parameter-independent code out of templates
