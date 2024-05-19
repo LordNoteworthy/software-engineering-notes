@@ -486,7 +486,7 @@ class that preserves insertion ordering.
    names.append(who)
    ```
    - 👎 Readability of this approach isn’t ideal.
-   - Why is it `set` when what it’s doing is getting a value? Why not call it `get_or_set`? 🤷.
+   - 🤷 Why is it `set` when what it’s doing is getting a value? Why not call it `get_or_set`?
    - ⚠️ The default value passed to `setdefault` is assigned **directly** into the dictionary when the key is missing instead of being copied.
 - There are only a few circumstances in which using `setdefault` is the shortest way to handle missing dictionary keys, such as when the default values are cheap to construct, mutable, and there’s no potential for raising exceptions (e.g., list instances). Check `defaultdict` in next item 🦊.
 
@@ -538,3 +538,44 @@ number of times.
 📆 Things to Remember
 - If you’re creating a dictionary to manage an arbitrary set of potential keys, then you should prefer using a `defaultdict` instance from the `collections` built-in module if it suits your problem.
 - If a dictionary of arbitrary keys is passed to you, and you **don’t control its creation**, then you should prefer the `get` method to access its items. However, it’s worth considering using the `setdefault` method for the few situations in which it leads to shorter code.
+
+### Item 18: Know How to Construct Key-Dependent Default Values with __missing__
+
+- There are times when neither `setdefault` nor `defaultdict` is the right fit:
+  - `setdefault`:
+    - The open built-in function to create the file handle is **always called**, even when the path is **already present** in the dictionary:
+     ```python
+     try:
+        handle = pictures.setdefault(path, open(path, 'a+b'))
+     except OSError:
+        print(f'Failed to open path {path}')
+        raise
+     ```
+     - Exceptions may be raised by the `open` call and need to be handled, but it may not be possible to **differentiate** them from **exceptions** that may be raised by the `setdefault` call on the same line
+   - `defaultdict` expects that the function passed to its constructor **doesn’t require** any arguments:
+      ```python
+      def open_picture(profile_path):
+         try:
+            return open(profile_path, 'a+b')
+         except OSError:
+            print(f'Failed to open path {profile_path}')
+            raise
+      pictures = defaultdict(open_picture)
+      handle = pictures[path]
+      ```
+- Solution ? ▶️ You can subclass the `dict` type and implement the `__missing__` special method to add custom logic for handling missing keys:
+   ```python
+   class Pictures(dict):
+      def __missing__(self, key):
+         value = open_picture(key)
+         self[key] = value
+         return value
+
+   pictures = Pictures()
+   handle = pictures[path]
+   ```
+
+📆 Things to Remember
+- The `setdefault` method of `dict` is a bad fit when creating the default value has high computational cost or may raise exceptions.
+- The function passed to `defaultdict` must not require any arguments, which makes it impossible to have the default value depend on the key being accessed.
+- You can define your own `dict` subclass with a `__missing__` method in order to construct default values that must know which key was being accessed.
