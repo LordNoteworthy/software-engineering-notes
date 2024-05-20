@@ -75,3 +75,29 @@ if tracing {
     }
     // ...
     ```
+
+## #3: Misusing init functions
+
+- Consider the example below:
+    ```go
+    var db *sql.DB
+    func init() {
+        dataSourceName := os.Getenv("MYSQL_DATA_SOURCE_NAME")
+        d, err := sql.Open("mysql", dataSourceName)
+        if err != nil {
+            log.Panic(err)
+        }
+        err = d.Ping()
+        if err != nil {
+            log.Panic(err)
+        }
+        db = d
+    }
+    ```
+-  Let’s describe three main downsides of the code above:
+   -   it shouldn’t necessarily be up to the package itself to decide whether to stop the application. Perhaps a caller might have preferred implementing a retry or using a fallback mechanism. In this case, opening the database within an init function prevents client packages from implementing their error-handling logic.
+   - If we add tests to this file, the init function will be executed before running the test cases, which isn’t necessarily what we want (for example, if we add unit tests on a utility function that doesn’t require this connection to be created). Therefore, the init function in this example complicates writing unit tests.
+   - The last downside is that the example requires assigning the database connection pool to a global variable. Global variables have some severe drawbacks; for example:
+    - Any functions can alter global variables within the package.
+    - Unit tests can be more complicated because a function that depends on a global variable won’t be isolated anymore.
+- We should be cautious with init functions. They can be helpful in some situations, however, such as defining static configuration. Otherwise, and in most cases, we should handle initializations through ad hoc functions.
