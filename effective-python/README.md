@@ -615,3 +615,30 @@ number of times.
 - Unpacking into **four** or more variables is **error prone** and should be avoided; instead, return a small class or `namedtuple` instance.
 
 ### Item 20: Prefer Raising Exceptions to Returning None
+
+- This misinterpretation of a `False`-equivalent return value is a common mistake in Python code when `None` has special meaning. This is why returning `None` from a function like `careful_divide` is error prone:
+   ```python
+   def careful_divide(a, b):
+      try:
+         return a / b
+      except ZeroDivisionError:
+         return None
+   ```
+- We should raise exceptions instead and use type annotations:
+   ```python
+   def careful_divide(a: float, b: float) -> float:
+      """Divides a by b.
+
+      Raises:
+         ValueError: When the inputs cannot be divided.
+      """
+      try:
+         return a / b
+      except ZeroDivisionError as e:
+         raise ValueError('Invalid inputs')
+   ```
+
+📆 Things to Remember
+- Functions that return `None` to indicate special meaning are **error prone** because `None` and other values (e.g., `zero`, the **empty** string) all evaluate to `False` in conditional expressions.
+- **Raise exceptions** to indicate special situations instead of returning `None`. Expect the calling code to handle exceptions properly when they’re documented.
+- **Type annotations** can be used to make it clear that a function will never return the value `None`, even in special situations.
