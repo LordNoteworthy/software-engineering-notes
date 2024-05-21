@@ -1527,3 +1527,49 @@ void workWithIterator(IterT iter) {
 - In derived class templates, refer to names in base class templates via a “`this->`” prefix, via `using` declarations, or via an **explicit** base class qualification.
 
 ### Item 44: Factor parameter-independent code out of templates
+
+- In **non-template** code, **replication** is **explicit**: you can *see* that there’s **duplication** between two functions or two classes. In **template** code, **replication** is **implicit**: there’s only one copy of the template source code, so you have to train yourself to sense the replication that may take place when a template is instantiated multiple times.
+- For example, suppose you’d like to write a template for **fixed-size** square matrices that, among other things, support matrix inversion.
+  ```cpp
+  template<typename T, std::size_t n> // template for n x n matrices of objects of type T
+  class SquareMatrix {
+    public:
+      void invert(); // invert the matrix in place
+  };
+
+  SquareMatrix<double, 5> sm1;
+  sm1.invert(); // call SquareMatrix<double, 5>::invert
+  SquareMatrix<double, 10> sm2;
+  sm2.invert(); // call SquareMatrix<double, 10>::invert
+  ```
+- Two copies of `invert` will be instantiated here. The functions won’t be **identical**, because one will work on 5×5 matrices and one will work on 10×10 matrices, but other than the constants 5 and 10, the two functions will be the same.
+- This is a classic way for template-induced code bloat to arise ⚠️.
+- Solution ? Create a version of the function that took a value as a parameter, then call the **parameterized** function with 5 or 10 instead of replicating the code:
+  ```cpp
+  template<typename T> // size-independent base class for square matrices
+  class SquareMatrixBase {
+    protected:
+      void invert(std::size_t matrixSize); // invert matrix of the given size
+    };
+  template<typename T, std::size_t n>
+  class SquareMatrix: private SquareMatrixBase<T> {
+    private:
+      using SquareMatrixBase<T>::invert; // make base class version of invert visible in this class
+    public:
+      void invert() { invert(n); } // make inline call to base class version
+  };
+  ```
+  - `SquareMatrixBase` is a template, but unlike `SquareMatrix`, it’s **templatized** only on the type of objects in the matrix, not on the **size** of the matrix. Hence, all matrices holding a given type of object will share a single `SquareMatrixBase` class. They will thus share a **single copy** of that class’s version of invert.
+  - Regardless of where the data is stored, the key result from a bloat point of view is that now many — maybe all — of `SquareMatrix`’s member functions can be simple **inline calls** to (non-inline) base class versions that are **shared** with all other matrices holding the same type of data, regardless of their size.
+- The versions of `invert` with the matrix sizes **hardwired** into them are likely to generate **better** code than the shared version where the size is passed as a function parameter or is stored in the object.
+  - For example, in the **size-specific** versions, the sizes would be **compile-time constants**, hence eligible for such **optimizations** as constant propagation, including their being folded into the generated instructions as immediate operands. That can’t be done in the **size-independent** version.
+  - On the other hand, having only one version of `invert` for multiple matrix sizes **decreases** the **size** of the executable, and that could reduce the program’s **working set** size and improve **locality** of reference in the instruction cache. Those things could make the program run faster, more than compensating for any lost optimizations in size-specific versions of `invert`.
+- ⚠️ Another efficiency consideration concerns the sizes of objects. If you’re not careful, **moving size-independent** versions of functions up into a base class can **increase** the overall size of each object.
+  - This Item has discussed only bloat due to **non-type template** parameters, but type parameters can lead to bloat, too:
+    - For example, on many platforms, `int` and `long` have the **same** binary representation, so the member functions for, say,` vector<int>` and `vector<long>` would likely be identical.
+    - Some linkers will **merge identical** function implementations, but some will not 😮‍💨 ▶️ code bloat in some environments !
+
+📆 Things to Remember
+- Templates generate multiple classes and multiple functions, so any template code not dependent on a template parameter causes **bloat**.
+- Bloat due to non-type template parameters can often be eliminated by **replacing template parameters** with **function parameters** or **class data members**.
+- Bloat due to type parameters can be reduced by **sharing implementations** for instantiation types with identical binary representations.
