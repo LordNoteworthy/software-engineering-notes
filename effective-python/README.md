@@ -582,3 +582,36 @@ number of times.
 
 ## Chapter 3: Functions
 
+### Item 19: Never Unpack More Than Three Variables When Functions Return Multiple Values
+
+- Consider the code below:
+   ```python
+   def get_stats(numbers):
+      minimum = min(numbers)
+      maximum = max(numbers)
+      count = len(numbers)
+      average = sum(numbers) / count
+
+      sorted_numbers = sorted(numbers)
+      middle = count // 2
+      if count % 2 == 0:
+         lower = sorted_numbers[middle - 1]
+         upper = sorted_numbers[middle]
+         median = (lower + upper) / 2
+      else:
+         median = sorted_numbers[middle]
+
+      return minimum, maximum, average, median, count
+
+   minimum, maximum, average, median, count = get_stats(lengths)
+   ```
+- There are two problems with this code.
+  - First, all the return values are **numeric**, so it is all too easy to **reorder** them **accidentally** (e.g., swapping `average` and `median`), which can cause bugs that are hard to spot later.
+   - Second, the line that calls the function and unpacks the values is **long**, and it likely will need to be wrapped in one of a variety of ways, which hurts **readability**:.
+
+📆 Things to Remember
+- You can have functions return multiple values by putting them in a tuple and having the caller take advantage of Python’s **unpacking syntax**.
+- Multiple return values from a function can also be unpacked by catch-all **starred expressions**.
+- Unpacking into **four** or more variables is **error prone** and should be avoided; instead, return a small class or `namedtuple` instance.
+
+### Item 20: Prefer Raising Exceptions to Returning None
