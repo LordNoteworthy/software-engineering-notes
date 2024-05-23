@@ -642,3 +642,58 @@ number of times.
 - Functions that return `None` to indicate special meaning are **error prone** because `None` and other values (e.g., `zero`, the **empty** string) all evaluate to `False` in conditional expressions.
 - **Raise exceptions** to indicate special situations instead of returning `None`. Expect the calling code to handle exceptions properly when they’re documented.
 - **Type annotations** can be used to make it clear that a function will never return the value `None`, even in special situations.
+
+### Item 21: Know How Closures Interact with Variable Scope
+
+- When you reference a variable in an expression, the Python interpreter traverses the scope to resolve the reference in this order:
+  1. The **current function**’s scope.
+  2. Any **enclosing** scopes (such as other containing functions).
+  3. The scope of the module that contains the code (also called the **global scope**).
+  1. The **built-in scope** (that contains functions like `len` and `str`).
+- Consider the code below (which suffers from a **scoping bug**):
+   ```python
+   def sort_priority2(numbers, group):
+      found = False # Scope: 'sort_priority2'
+      def helper(x):
+         if x in group:
+            found = True # Scope: 'helper' -- Bad!
+            return (0, x)
+         return (1,x)
+      numbers.sort(key=helper)
+      return found
+   ```
+- Here, I define the same function again, now using `nonlocal`:
+   ```python
+   def sort_priority3(numbers, group):
+      found = False
+      def helper(x):
+         nonlocal found # Added
+         if x in group:
+            found = True
+            return (0, x)
+         return (1, x)
+      numbers.sort(key=helper)
+      return found
+   ```
+- When your usage of `nonlocal` starts getting complicated, it’s better to wrap your state in a helper class:
+   ```python
+   class Sorter:
+      def __init__(self, group):
+         self.group = group
+         self.found = False
+      def __call__(self, x):
+         if x in self.group:
+            self.found = True
+            return (0, x)
+         return (1, x)
+
+   sorter = Sorter(group)
+   numbers.sort(key=sorter)
+   assert sorter.found is True
+   ```
+
+📆 Things to Remember
+- Closure functions can refer to variables from any of the scopes in which they were defined.
+- By default, closures can’t affect enclosing scopes by assigning variables.
+- Use the `nonlocal` statement to indicate when a closure can modify a variable in its enclosing scopes.
+- Avoid using `nonlocal` statements for anything beyond simple functions.
