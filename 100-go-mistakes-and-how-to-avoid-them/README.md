@@ -114,3 +114,53 @@ if tracing {
 - We shouldn’t **overwhelm** our code with getters and setters on structs if they don’t bring any value. We should be pragmatic and strive to find the right balance between efficiency and following idioms that are sometimes considered indisputable in other programming paradigms.
 
 ## #5: Interface pollution
+
+- Interface pollution is about **overwhelming** our code with **unnecessary abstractions**, making it harder to understand.
+- What makes Go interfaces so different is that they are satisfied **implicitly**. There is no explicit keyword like *implements* to mark that an object `X` implements interface `Y`.
+- While designing interfaces, the **granularity** (how many methods the interface contains) is also something to keep in mind:
+  - 🌟 *The bigger the interface, the weaker the abstraction*.
+  - Examples: `io.Reader`.
+- When to use interfaces ?
+  - When multiple types implement a **common** behavior. For example, This `Interface` has a strong potential for reusability because it encompasses the common behavior to **sort** any collection that is index-based:
+  ```go
+  type Interface interface {
+    Len() int
+    Less(i, j int) bool
+    Swap(i, j int)
+    }
+  ```
+  - **Decoupling** our code from an implementation:
+    - **Liskov Substitution Principle** (the L in *Robert C. Martin’s* SOLID design principles).
+    - If we rely on an **abstraction** instead of a **concrete** implementation, the implementation itself can be replaced with another without even having to change our code. Example:
+    ```go
+    type customerStorer interface {
+        StoreCustomer(Customer) error
+    }
+    type CustomerService struct {
+        storer customerStorer
+    }
+    func (cs CustomerService) CreateNewCustomer(id string) error {
+        customer := Customer{id: id}
+        return cs.storer.StoreCustomer(customer)
+    }
+    ```
+    - This gives us more **flexibility** in how we want to test the method:
+      - Use the concrete implementation via integration tests.
+      - Use a mock (or any kind of test double) via unit tests.
+  - **Restrict** a type to a specific behavior for various reasons, such as semantics enforcement:
+    ```go
+    type Foo struct {
+        threshold intConfigGetter
+    }
+    func NewFoo(threshold intConfigGetter) Foo {
+        return Foo{threshold: threshold}
+    }
+    func (f Foo) Bar() {
+        threshold := f.threshold.Get()
+        // ...
+    }
+    ```
+    - The configuration getter is **injected** into the `NewFoo` factory method. It doesn’t impact a client of this function because it can still pass an `IntConfig` struct as
+it implements `intConfigGetter`. Then, we can only read the configuration in the `Bar` method, not modify it.
+- The main caveat when programming meets abstractions is remembering that abstractions should be **discovered**, not **created**.
+  - 🌟 *Don’t design with interfaces, discover them*.
