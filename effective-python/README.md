@@ -697,3 +697,29 @@ number of times.
 - By default, closures can’t affect enclosing scopes by assigning variables.
 - Use the `nonlocal` statement to indicate when a closure can modify a variable in its enclosing scopes.
 - Avoid using `nonlocal` statements for anything beyond simple functions.
+
+### Item 22: Reduce Visual Noise with Variable Positional Arguments
+
+- Accepting a variable number of **positional** arguments can make a function call **clearer** and reduce **visual noise**.
+- These positional arguments are often called *varargs* for short, or *star args*, in reference to the conventional name for the parameter *args.
+```python
+def log(message, *values): # The only difference
+   if not values:
+      print(message)
+   else:
+      values_str = ', '.join(str(x) for x in values)
+      print(f'{message}: {values_str}')
+
+log('My numbers are', 1, 2)
+log('Hi there') # Much better
+```
+- If I already have a **sequence** (like a list) and want to call a variadic function like `log`, I can do this by using the `*` operator.
+- ⚠️ There are two problems with accepting a variable number of positional arguments:
+  - `varargs` are always turned into a **tuple** before they are passed to a function. This means that if the caller uses the * operator on a **generator**, it will be iterated until it’s exhausted. ▶️ Functions that accept `*args` are best for situations where you know the number of inputs in the argument list will be **reasonably small**.
+  - You can’t add new positional arguments to a function in the future without **migrating** every caller. ▶️ Use **keyword** only arguments.
+
+📆 Things to Remember
+- Functions can accept a variable number of positional arguments by using *args in the def statement.
+- You can use the items from a sequence as the positional arguments for a function with the * operator.
+- Using the * operator with a generator may cause a program to run out of memory and crash.
+- Adding new positional parameters to functions that accept *args can introduce hard-to-detect bugs.
