@@ -164,3 +164,18 @@ if tracing {
 it implements `intConfigGetter`. Then, we can only read the configuration in the `Bar` method, not modify it.
 - The main caveat when programming meets abstractions is remembering that abstractions should be **discovered**, not **created**.
   - 🌟 *Don’t design with interfaces, discover them*.
+
+## #7: Returning interfaces
+
+- We will consider two packages: `client`, which contains a `Store` interface and `store`, which contains an implementation of `Store`.
+
+<p align="center"><img src="./assets/store-client-dependency.png" width="500px" height="auto"></p>
+
+- The `client` package can’t call the `NewInMemoryStore` function anymore; otherwise, there would be a **cyclic dependency**.
+- In general, returning an interface restricts **flexibility** because we force all the clients to use one particular type of abstraction.
+- *Be conservative in what you do, be liberal in what you accept from others.* If we apply this idiom to Go, it means
+    - 👍 Returning structs instead of interfaces.
+    - 👍 Accepting interfaces if possible.
+- We shouldn’t return interfaces but concrete implementations. Otherwise, it can make our design more complex due to package dependencies and can restrict flexibility because all the clients would have to rely on the same
+abstraction.
+- Also, we will only be able to use the methods **defined** in the interface, and not the methods defined in the **concrete type**.
