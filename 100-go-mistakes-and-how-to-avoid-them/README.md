@@ -165,12 +165,39 @@ it implements `intConfigGetter`. Then, we can only read the configuration in the
 - The main caveat when programming meets abstractions is remembering that abstractions should be **discovered**, not **created**.
   - 🌟 *Don’t design with interfaces, discover them*.
 
+## #6: Interface on the producer side
+
+- **Producer** side — An interface defined in the same package as the concrete implementation.
+- **Consumer** side — An interface defined in an external package where it’s used. <p align="center"><img src="./assets/iface-producer-consumer.png" width="500px" height="auto"></p>
+- It’s common to see developers creating interfaces on the producer side, alongside the concrete implementation. This design is perhaps a habit from developers having a *C#* or a *Java* background. But in Go, in most cases this is not what we should do 🤨.
+- Let’s discuss the following example:
+    ```go
+    package store
+    // CustomerStorage is a good way 🤷 to decouple the client code from the actual implementation.
+    // Or, perhaps we can foresee that it will help clients in creating test doubles.
+    type CustomerStorage interface {
+        StoreCustomer(customer Customer) error
+        GetCustomer(id string) (Customer, error)
+        UpdateCustomer(customer Customer) error
+        GetAllCustomers() ([]Customer, error)
+        GetCustomersWithoutContract() ([]Customer, error)
+        GetCustomersWithNegativeBalance() ([]Customer, error)
+    }
+    ```
+- This isn’t a best practice in Go. Why ? It’s not up to the producer to **force a given abstraction** for all the clients. Instead, it’s up to the client to decide whether it needs some form of abstraction and then determine the best abstraction level for its needs. For example:
+    ```go
+    package client
+
+    type customersGetter interface {
+        GetAllCustomers() ([]store.Customer, error)
+    }
+    ```
+- The main point is that the `client` package can now define the most **accurate** abstraction for its need (here, only one method). It relates to the concept of the *Interface Segregation Principle* (the `I` in *SOLID*) ▶️ No client should be forced to depend on methods it doesn’t use.
+- An interface should live on the **consumer** side in most cases. However, in particular contexts (for example - in the standard library `encoding, encoding/json, encoding/binary`, when we know — not foresee—that an abstraction will be helpful for consumers), we may want to have it on the **producer** side. If we do, we should strive to keep it as **minimal** as possible, increasing its **reusability** potential and making it more easily **composable**.
+
 ## #7: Returning interfaces
 
-- We will consider two packages: `client`, which contains a `Store` interface and `store`, which contains an implementation of `Store`.
-
-<p align="center"><img src="./assets/store-client-dependency.png" width="500px" height="auto"></p>
-
+- We will consider two packages: `client`, which contains a `Store` interface and `store`, which contains an implementation of `Store`. <p align="center"><img src="./assets/store-client-dependency.png" width="500px" height="auto"></p>
 - The `client` package can’t call the `NewInMemoryStore` function anymore; otherwise, there would be a **cyclic dependency**.
 - In general, returning an interface restricts **flexibility** because we force all the clients to use one particular type of abstraction.
 - *Be conservative in what you do, be liberal in what you accept from others.* If we apply this idiom to Go, it means
