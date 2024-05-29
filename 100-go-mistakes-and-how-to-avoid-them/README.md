@@ -206,3 +206,31 @@ it implements `intConfigGetter`. Then, we can only read the configuration in the
 - We shouldn’t return interfaces but concrete implementations. Otherwise, it can make our design more complex due to package dependencies and can restrict flexibility because all the clients would have to rely on the same
 abstraction.
 - Also, we will only be able to use the methods **defined** in the interface, and not the methods defined in the **concrete type**.
+
+## #8: any says nothing
+
+- With Go 1.18, the predeclared type `any` became an alias for an **empty interface {}**.
+- In assigning a value to an `any` type, we **lose** all **type information**, which requires a type assertion to get anything useful out of the `i` variable.
+    ```go
+    func main() {
+        var i any
+        i = 42
+        i = "foo"
+        i = struct {
+            s string
+        }{
+            s: "bar",
+        }
+        i = f
+        _ = i
+    }
+    func f() {}
+    ```
+- In methods, accepting or returning an `any` type doesn’t **convey meaningful information**:
+  - Because there is no **safeguard** at compile time, nothing prevents a caller from calling these methods with whatever data type.
+  - Also, the methods lack **expressiveness**. If future developers need to use the parameters of type `any`, they will probably have to dig into the documentation or read the code to understand how to use these methods.
+- What are the cases when `any` is helpful?:
+  - In the `encoding/json` package. Because we can marshal any type, the `Marshal` function accepts an `any` argument.
+  - Another example is in the `database/sql` package. If the query is parameterized (for example, `SELECT * FROM FOO WHERE id = ?`), the parameters could be any kind.
+
+## #9: Being confused about when to use generics
