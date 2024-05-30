@@ -723,3 +723,32 @@ log('Hi there') # Much better
 - You can use the items from a sequence as the positional arguments for a function with the * operator.
 - Using the * operator with a generator may cause a program to run out of memory and crash.
 - Adding new positional parameters to functions that accept *args can introduce hard-to-detect bugs.
+
+### Item 23: Provide Optional Behavior with Keyword Arguments
+
+- You can mix and match keyword and positional arguments, positional arguments must be specified before keyword arguments.
+- Each argument can be specified only once 🤪.
+- If you already have a dictionary, and you want to use its contents to call a function like `remainder`, you can do this by using the `** operator`. This instructs Python to pass the values from the dictionary as the corresponding keyword arguments of the function:
+   ```python
+   def remainder(number, divisor):
+      return number % divisor
+
+   my_kwargs = {
+      'number': 20,
+      'divisor': 7,
+   }
+   remainder(**my_kwargs)
+   ```
+- You can mix the `** operator` with positional arguments or keyword arguments in the function call, as long as no argument is repeated: `remainder(number=20, **my_kwargs)`.
+- You can also use the `** operator` multiple times if you know that the dictionaries don’t contain **overlapping** keys: `remainder(**my_kwargs, **other_kwargs)`
+- And if you’d like for a function to receive any named keyword argument, you can use the `**kwargs` catch-all parameter to collect those arguments into a dict that you can then process.
+- The flexibility of keyword arguments provides three significant benefits:
+  - 👍 They make the function call **clearer** to new readers of the code.
+  - 👍 They can have **default** values specified in the function definition ▶️  eliminates repetitive code and reduces noise.
+  - 👍 They provide a powerful way to extend a function’s parameters while remaining **backward compatible** with existing callers.
+
+📆 Things to Remember
+- Function arguments can be specified by position or by keyword.
+- Keywords make it clear what the purpose of each argument is when it would be confusing with only positional arguments.
+- Keyword arguments with default values make it easy to add new behaviors to a function without needing to migrate all existing callers.
+- Optional keyword arguments should always be passed by keyword instead of by position.
