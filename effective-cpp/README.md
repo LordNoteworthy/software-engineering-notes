@@ -1573,3 +1573,69 @@ void workWithIterator(IterT iter) {
 - Templates generate multiple classes and multiple functions, so any template code not dependent on a template parameter causes **bloat**.
 - Bloat due to non-type template parameters can often be eliminated by **replacing template parameters** with **function parameters** or **class data members**.
 - Bloat due to type parameters can be reduced by **sharing implementations** for instantiation types with identical binary representations.
+
+### Item 45: Use member function templates to accept “all compatible types.”
+
+- **Derived** class pointers **implicitly convert** into **base** class pointers, pointers to `non-const` objects convert into pointers to `const` objects, etc. For example, consider some conversions that can occur in a three-level hierarchy:
+  ```cpp
+  class Top { ... };
+  class Middle: public Top { ... };
+  class Bottom: public Middle { ... };
+  Top *pt1 = new Middle; // convert Middle* ⇒ Top*
+  Top *pt2 = new Bottom; // convert Bottom* ⇒ Top*
+  const Top *pct2 = pt1; // convert Top* ⇒ const Top*
+  ```
+- Emulating such conversions in user-defined smart pointer classes is tricky because:
+  - There is **no inherent relationship** among different instantiations of the same template, so compilers view `SmartPtr<Middle>` and `SmartPtr<Top>` as completely **different classes**.
+  - To get the conversions among `SmartPtr` classes that we want, we have to program them explicitly with smart pointer constructors.
+  - But the number of constructors we need is **unlimited** (the hierarchy of classes can be extended in the future such as: `class BelowBottom: public Bottom { ... };`) 🤷.
+  - So it seems that we don’t need a **constructor function** for `SmartPtr`, we need a **constructor template**.
+  - Such templates are examples of **member function templates** (often just known as **member templates**) - templates that generate member functions of a class:
+  ```cpp
+  template<typename T>
+  class SmartPtr {
+    public:
+      template<typename U> // member template for a ”generalized copy constructor”
+      SmartPtr(const SmartPtr<U>& other);
+    };
+  ```
+- This says that for every type `T` and every type `U`, a `SmartPtr<T>` can be created from a `SmartPtr<U>`, because `SmartPtr<T>` has a constructor that takes a `SmartPtr<U>` parameter.
+- Constructors like this — ones that create one object from another object whose type is a different instantiation of the same template (e.g., create a `SmartPtr<T>` from a `SmartPtr<U>`) — are sometimes known as *generalized copy constructors*.
+- The generalized copy constructor above is not declared **explicit**. That’s deliberate. Type conversions among built-in pointer types (e.g., from derived to base class pointers) are implicit and require no cast, so it’s
+reasonable for smart pointers to emulate that behavior.
+- As declared, the generalized copy constructor for `SmartPtr` offers **more than we want**. Yes, we want to be able to create a `SmartPtr<Top>` from a `SmartPtr<Bottom>`, but we don’t want to be able to create a `SmartPtr<Bottom>` from a `SmartPtr<Top>`, as that’s contrary to the meaning of public inheritance ‼️.
+  - We also don’t want to be able to create a `SmartPtr<int>` from a `SmartPtr<double>`, because there is no corresponding implicit conversion from `double*` to `int*`.
+- We can use the implementation of the constructor template to restrict the conversions to those we want:
+```cpp
+template<typename T>
+class SmartPtr {
+  public:
+    template<typename U>
+    SmartPtr(const SmartPtr<U>& other) // initialize this held ptr with other’s held ptr
+    : heldPtr(other.get()) { ... }
+    T* get() const { return heldPtr; }
+    ...
+  private: // built-in pointer held  by the SmartPtr
+    T *heldPtr;
+};
+```
+- ▶️ We use the member initialization list to initialize `SmartPtr<T>`’s data member of type `T*` with the pointer of type `U*` held by the `SmartPtr<U>`.
+  - This will compile only if there is an **implicit conversion** from a `U*` pointer to a `T*` pointer, and that’s precisely what we want.
+  - The net effect is that `SmartPtr<T>` now has a generalized copy constructor that will compile only if passed a parameter of a **compatible type**.
+- If you want to control all aspects of copy construction, you must declare **both a generalized copy constructor** as well as the **“normal” copy constructor**. The same applies to assignment. Here’s an excerpt from `tr1::shared_ptr`’s definition that exemplifies this:
+  ```cpp
+  template<class T> class shared_ptr {
+  public:
+    shared_ptr(shared_ptr const& r); // copy constructor
+    template<class Y> // generalized
+    shared_ptr(shared_ptr<Y> const& r); // copy constructor
+    shared_ptr& operator=(shared_ptr const& r); // copy assignment
+    template<class Y> // generalized
+    shared_ptr& operator=(shared_ptr<Y> const& r); // copy assignment
+    ...
+  };
+```
+
+📆 Things to Remember
+- Use member function templates to generate functions that accept all compatible types.
+- If you declare member templates for generalized copy construction or generalized assignment, you’ll still need to declare the normal copy constructor and copy assignment operator, too
