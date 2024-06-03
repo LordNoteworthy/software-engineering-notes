@@ -234,3 +234,55 @@ abstraction.
   - Another example is in the `database/sql` package. If the query is parameterized (for example, `SELECT * FROM FOO WHERE id = ?`), the parameters could be any kind.
 
 ## #9: Being confused about when to use generics
+
+- Go 1.18 adds generics to the language 🥳.
+-  👍 Few common uses where generics are recommended:
+    - **Data structures** : We can use generics to **factor out** the element type if we implement a binary tree, a linked list, or a heap, for example.
+    - **Functions working with slices, maps, and channels of any type** : A function to merge two channels would work with any `channel` type, for example
+      - Hence, we could use type parameters to factor out the channel type:
+        ```go
+        func merge[T any](ch1, ch2 <-chan T) <-chan T {
+        // ...
+        }
+        ```
+    - **Factoring out behaviors instead of types**:  The `sort` package, for example, contains a `sort.Interface` interface with three methods:
+        ```go
+        type Interface interface {
+            Len() int
+            Less(i, j int) bool
+            Swap(i, j int)
+        }
+        ```
+      - This interface is used by different functions such as `sort.Ints` or `sort.Float64s`. Using type parameters, we could factor out the sorting behavior(for example, by defining a `struct` holding a slice and a comparison function):
+        ```go
+        type SliceFn[T any] struct {
+            S []T
+            Compare func(T, T) bool
+        }
+        func (s SliceFn[T]) Len() int { return len(s.S) }
+        func (s SliceFn[T]) Less(i, j int) bool { return s.Compare(s.S[i], s.S[j]) }
+        func (s SliceFn[T]) Swap(i, j int) { s.S[i], s.S[j] = s.S[j], s.S[i] }
+        ```
+      - Then, because the `SliceFn` struct implements `sort.Interface`, we can sort the provided slice using the `sort.Sort(sort.Interface)` function:
+        ```go
+        s := SliceFn[int]{
+            S: []int{3, 2, 1},
+            Compare: func(a, b int) bool {
+                return a < b
+            },
+        }
+        sort.Sort(s)
+        fmt.Println(s.S)
+        ```
+- 👎 when is it recommended that we not use generics:
+    - When **calling a method of the type argument**: Consider a function that receives an `io.Writer` and calls the `Write` method, for example:
+        ```go
+        func foo[T io.Writer](w T) {
+            b := getBytes()
+            _, _ = w.Write(b)
+        }
+        ```
+        - In this case, using generics won’t bring any value to our code whatsoever. We should make the `w` argument an `io.Writer` directly.
+    - When it makes our code **more complex**: Generics are never mandatory, and as Go developers, we have lived without them for more than a decade. If we’re writing generic functions or structures and we figure out that it doesn’t make our code clearer, we should probably reconsider our decision for that particular use case.
+
+## #10: Not being aware of the possible problems with type embedding
