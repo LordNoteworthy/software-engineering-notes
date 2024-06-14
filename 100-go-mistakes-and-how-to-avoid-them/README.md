@@ -286,3 +286,41 @@ abstraction.
     - When it makes our code **more complex**: Generics are never mandatory, and as Go developers, we have lived without them for more than a decade. If we’re writing generic functions or structures and we figure out that it doesn’t make our code clearer, we should probably reconsider our decision for that particular use case.
 
 ## #10: Not being aware of the possible problems with type embedding
+
+- 👎 The wolloing example is a wrong usage of type embedding. Since `sync.Mutex` is an embedded type, the `Lock` and `Unlock` methods will be **promoted**. Therefore, both methods become **visible** to external clients using `InMem`:
+    ```go
+    type InMem struct {
+        sync.Mutex
+        m map[string]int
+    }
+- We want to write a custom logger that contains an `io.WriteCloser` and exposes two methods, `Write` and `Close`. If `io.WriteCloser` wasn’t **embedded**, we would need to write it like so:
+    ```go
+    type Logger struct {
+        writeCloser io.WriteCloser
+    }
+    func (l Logger) Write(p []byte) (int, error) {
+        return l.writeCloser.Write(p) // Forwards the call to writeCloser
+    }
+    func (l Logger) Close() error {
+        return l.writeCloser.Close() // Forwards the call to writeCloser
+    }
+    func main() {
+        l := Logger{writeCloser: os.Stdout}
+        _, _ = l.Write([]byte("foo"))
+        _ = l.Close()
+    }
+    ```
+- 👍 Logger `would` have to provide both a `Write` and a `Close` method that would only **forward** the call to `io.WriteCloser`. However, if the field now becomes **embedded**, we can remove these forwarding methods:
+    ```go
+    type Logger struct {
+        io.WriteCloser
+    }
+    func main() {
+        l := Logger{WriteCloser: os.Stdout}
+        _, _ = l.Write([]byte("foo"))
+        _ = l.Close()
+    }
+    ```
+- If we decide to use type embedding, we need to keep two main constraints in mind:
+    - It shouldn’t be used solely as some **syntactic sugar** to simplify accessing a field (such as `Foo.Baz()` instead of `Foo.Bar.Baz()`). If this is the only rationale, let’s not embed the inner type and use a field instead.
+    - It shouldn’t promote data (fields) or a behavior (methods) we want to **hide** from the outside: for example, if it allows clients to access a locking behavior (`sync.Mutex`) that should remain **private** to the struct.
