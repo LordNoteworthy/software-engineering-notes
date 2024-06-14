@@ -752,3 +752,33 @@ log('Hi there') # Much better
 - Keywords make it clear what the purpose of each argument is when it would be confusing with only positional arguments.
 - Keyword arguments with default values make it easy to add new behaviors to a function without needing to migrate all existing callers.
 - Optional keyword arguments should always be passed by keyword instead of by position.
+
+### Item 24: Use None and Docstrings to Specify Dynamic Default Arguments
+
+- For example, say that I want to load a value encoded as JSON data; if decoding the data fails, I want an empty dictionary to be returned by default:
+   ```python
+   import json
+   def decode(data, default={}):
+      try:
+         return json.loads(data)
+      except ValueError:
+         return default
+   ```
+- The dictionary specified for default will be **shared** by **all calls to decode** because default argument values are evaluated only once (at module load time). This can cause **extremely surprising behavior**:
+   ```python
+   foo = decode('bad data')
+   foo['stuff'] = 5
+   bar = decode('also bad')
+   bar['meep'] = 1
+   print('Foo:', foo)
+   print('Bar:', bar)
+   >>>
+   Foo: {'stuff': 5, 'meep': 1}
+   Bar: {'stuff': 5, 'meep': 1}
+   ```
+- You might expect two different dictionaries, each with a single key and value. But modifying one seems to also modify the other. The culprit is that `foo` and `bar` are both equal to the default parameter. They are the same dictionary object !
+
+📆 Things to Remember
+- A default argument value is **evaluated only once**: during function definition at **module load time**. This can cause odd behaviors for dynamic values (like `{}`, `[]`, or `datetime.now()`).
+- Use `None` as the default value for any keyword argument that has a dynamic value. Document the actual default behavior in the function’s docstring.
+- Using `None` to represent keyword argument default values also works correctly with type annotations.
