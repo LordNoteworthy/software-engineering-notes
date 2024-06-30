@@ -324,3 +324,107 @@ abstraction.
 - If we decide to use type embedding, we need to keep two main constraints in mind:
     - It shouldn’t be used solely as some **syntactic sugar** to simplify accessing a field (such as `Foo.Baz()` instead of `Foo.Bar.Baz()`). If this is the only rationale, let’s not embed the inner type and use a field instead.
     - It shouldn’t promote data (fields) or a behavior (methods) we want to **hide** from the outside: for example, if it allows clients to access a locking behavior (`sync.Mutex`) that should remain **private** to the struct.
+
+## #11 Not using the functional options pattern
+
+- How can we implement passing an configuration option to a function in an API-friendly way? Let’s look at the different options.
+- **Config struct**:
+  - The **mandatory** parameters could live as function parameters, whereas the **optional** parameters could be handled in the `Config` struct:
+    ```go
+    type Config struct {
+        Port int
+    }
+    func NewServer(addr string, cfg Config) { }
+    ```
+    - 👍 This solution fixes the **compatibility** issue. Indeed, if we add new options, it will not break on the client side.
+    - 👎 However, this approach does not distinguish between a field purposely set to 0 and a missing field:
+        - 0 for an integer, 0.0 for a floating-point type
+        - "" for a string
+        - Nil for slices, maps, channels, pointers, interfaces.
+        - ▶️ One option might be to handle all the parameters of the configuration struct as **pointers**, however, it’s not handy for clients to work with pointers as they have to create a variable and then pass a pointer 🤷, also client using our library with the default configuration will need to pass an **empty struct**.
+- **Builder pattern**:
+  - The construction of `Config` is separated from the struct itself. It requires an extra struct, `ConfigBuilder`, which receives methods to configure and build a `Config`:
+    ```go
+    type Config struct {
+        Port int
+    }
+    type ConfigBuilder struct {
+        port *int
+    }
+    func (b *ConfigBuilder) Port(
+        port int) *ConfigBuilder {
+        b.port = &port
+        return b
+    }
+    func (b *ConfigBuilder) Build() (Config, error) {
+        cfg := Config{}
+        if b.port == nil {
+            cfg.Port = defaultHTTPPort
+        } else {
+            if *b.port == 0 {
+                cfg.Port = randomPort()
+            } else if *b.port < 0 {
+                return Config{}, errors.New("port should be positive")
+            } else {
+                cfg.Port = *b.port
+            }
+        }
+        return cfg, nil
+    }
+    ```
+  - The `ConfigBuilder` struct holds the client configuration. It exposes a `Port` method to set up the port. Usually, such a configuration method returns the **builder itself** so that we can use method **chaining** (for example, `builder.Foo("foo").Bar("bar")`). It also exposes a `Build` method that holds the logic on initializing the port value (whether the pointer was nil, etc.) and returns a `Config` struct once created.
+    - 👍 This approach makes port management handier. It’s **not required** to pass an integer pointer, as the `Port` method accepts an integer. However, we still need to pass a config struct that can be empty if a client wants to use the default configuration 🤷.
+    - 👎 In programming languages where exceptions are thrown, builder methods such as `Port` can raise **exceptions** if the input is invalid. If we want to keep the ability to **chain** the calls, the
+function **can’t return an error**. Therefore, we have to delay the validation in the `Build()`.
+- **Functional options pattern**:
+- The main idea is as follows:
+  - An **unexported** struct holds the configuration: options.
+  - Each option is a function that returns the **same type**: `type Option func(options *options) error`. For example, `WithPort` accepts an `int` argument that represents the port and returns an `Option` type that represents how to update the options struct.
+    ```go
+    type options struct {
+        port *int
+    }
+    type Option func(options *options) error
+
+    func WithPort(port int) Option {
+        return func(options *options) error {
+            if port < 0 {
+                return errors.New("port should be positive")
+            }
+            options.port = &port
+            return nil
+        }
+    }
+    ```
+  - Each config field requires creating a public function (that starts with the `With` prefix by convention) containing similar logic: validating inputs if needed and updating the config struct.
+    ```go
+    func NewServer(addr string, opts ...Option) (*http.Server, error) {
+        var options options
+        for _, opt := range opts {
+            err := opt(&options)
+            if err != nil {
+                return nil, err
+            }
+        }
+        // At this stage, the options struct is built and contains the config
+        // Therefore, we can implement our logic related to port configuration
+        var port int
+        if options.port == nil {
+            port = defaultHTTPPort
+        } else {
+            if *options.port == 0 {
+                port = randomPort()
+            } else {
+                port = *options.port
+            }
+        }
+        // ...
+    }
+  - Because `NewServer` accepts **variadic** Op`tion arguments, a client can now call this API by passing multiple options following the mandatory address argument. For example:
+    ```go
+    server, err := httplib.NewServer("localhost",
+        httplib.WithPort(8080),
+        httplib.WithTimeout(time.Second)
+    )
+    ```
+  - 👍 Provides a handy and API-friendly way to handle options and represent the most idiomatic way. If the client needs the default configuration, it doesn’t have to provide an argument.
