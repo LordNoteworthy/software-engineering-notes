@@ -782,3 +782,55 @@ log('Hi there') # Much better
 - A default argument value is **evaluated only once**: during function definition at **module load time**. This can cause odd behaviors for dynamic values (like `{}`, `[]`, or `datetime.now()`).
 - Use `None` as the default value for any keyword argument that has a dynamic value. Document the actual default behavior in the function’s docstring.
 - Using `None` to represent keyword argument default values also works correctly with type annotations.
+
+### Item 25: Enforce Clarity with Keyword-Only and Positional-Only Arguments
+
+- Consider the example below:
+   ```python
+   def safe_division(number, divisor, ignore_overflow, ignore_zero_division):
+      try:
+         return number / divisor
+      except OverflowError:
+         if ignore_overflow:
+            return 0
+         else:
+            raise
+      except ZeroDivisionError:
+         if ignore_zero_division:
+            return float('inf')
+         else:
+            raise
+   ```
+- The problem is that it’s easy to **confuse** the **position** of the two *Boolean* arguments that control the exception-ignoring behavior.
+- One way to improve the readability of this code is to use keyword arguments:
+   ```python
+   def safe_division_b(number, divisor,
+      ignore_overflow=False, # Changed
+      ignore_zero_division=False): # Changed
+   ```
+- The problem is, since these keyword arguments are **optional** behavior, there’s nothing forcing callers to use keyword arguments for clarity 🤷. With complex functions like this, it’s better to require that callers are clear about their intentions by defining functions with **keyword-only** arguments. These arguments can only be supplied by keyword, **never by position**.
+- The `*` symbol in the argument list indicates the end of positional arguments and the beginning of keyword-only arguments:
+   ```python
+   def safe_division_c(number, divisor, *, # Changed
+         ignore_overflow=False,
+         ignore_zero_division=False):
+   ```
+- Callers may specify the first two required arguments (*number* and *divisor*) with a mix of positions and keywords: `safe_division_c(number=2, divisor=5) == 0.4`. Later, I may decide to change the names of these first two arguments because of expanding needs or even just because my style preferences change:
+   ```python
+   def safe_division_c(numerator, denominator, *, # Changed
+         ignore_overflow=False,
+         ignore_zero_division=False):
+   ```
+- Unfortunately, this seemingly superficial change **breaks all the existing callers** that specified the *number* or *divisor* arguments using keywords. Python 3.8 introduces a solution to this problem, called **positional-only** arguments.
+- Here, I redefine the `safe_division` function to use positional-only arguments for the **first two required parameters**. The `/` symbol in the argument list indicates where **positional-only arguments end**:
+   ```python
+   def safe_division_d(numerator, denominator, /, *, # Changed
+         ignore_overflow=False,
+         ignore_zero_division=False):
+   ```
+- 🌟 One notable consequence of keyword- and positional-only arguments is that any parameter name **between** the `/` and `*` symbols in the argument list may be passed **either** by **position** or by **keyword**.
+
+📆 Things to Remember
+- **Keyword-only** arguments **force** callers to supply certain arguments by keyword (instead of by position), which makes the **intention** of a function call **clearer**. Keyword-only arguments are defined after a single `*` in the argument list.
+- **Positional-only** arguments ensure that callers can’t supply certain parameters using keywords, which helps **reduce coupling**. Positional-only arguments are defined before a single `/` in the argument list.
+- Parameters between the `/` and `*` characters in the argument list may be supplied by position or keyword, which is the default for Python parameters.

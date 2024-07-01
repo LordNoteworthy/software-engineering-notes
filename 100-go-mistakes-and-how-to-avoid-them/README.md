@@ -428,3 +428,11 @@ function **can’t return an error**. Therefore, we have to delay the validation
     )
     ```
   - 👍 Provides a handy and API-friendly way to handle options and represent the most idiomatic way. If the client needs the default configuration, it doesn’t have to provide an argument.
+
+## #12: Project misorganization
+
+- **Project structure**:
+  - Go language maintainer has no strong convention about structuring a project in Go. However, one layout has emerged over the years: [project-layout](https://github.com/golang-standards/project-layout).
+  - There’s no **mandatory** convention. This layout may be helpful for you or not, but what’s important here is that **indecision** is the only **wrong decision**.
+- **Package organization**:
+  - In Go, there is no concept of subpackages.
