@@ -441,3 +441,45 @@ function **can’t return an error**. Therefore, we have to delay the validation
   - Avoid having **dozens** of **nano** packages containing only one or two files. Conversely, we should also avoid **huge** packages that dilute the meaning of a package name.
   - We should name our packages after what they **provide**, not what they **contain**. Also, naming should be **meaningful**. Therefore, a package name should be **short**, **concise**, **expressive**, and, by convention, a **single lowercase word**.
   - We should **minimize** what should be **exported** as much as possible to **reduce the coupling** between packages and keep unnecessary exported elements hidden. In doubt, default to not exporting it!
+
+## #13: Creating utility packages
+
+- As a rule of thumb, creating **shared** packages without meaningful names isn’t a good idea; this includes utility packages such as `utils`, `common`, or `base`. Also, bear in mind that naming a package after what it provides and not what it contains can be an efficient way to increase its **expressiveness**.
+- Consider the following example:
+    ```go
+    package util
+
+    func NewStringSet(...string) map[string]struct{} {
+        // ...
+    }
+    func SortStringSet(map[string]struct{}) []string {
+        // ...
+    }
+
+    // A client will use this package like this:
+    set := util.NewStringSet("c", "a", "b")
+    fmt.Println(util.SortStringSet(set))
+    ```
+- Instead of a utility package, we should create an expressive package name such as `stringset`. For example:
+    ```go
+    package stringset
+
+    func New(...string) map[string]struct{} { ... }
+    func Sort(map[string]struct{}) []string { ... }
+
+    // In this example, we removed the suffixes for NewStringSet and SortStringSet,
+    // which respectively became New and Sort. On the client side, it now looks like this:
+    set := stringset.New("c", "a", "b")
+    fmt.Println(stringset.Sort(set))
+    ```
+- We could even go a step further. Instead of exposing utility functions, we could create a specific type and expose `Sort` as a method this way:
+    ```go
+    type Set map[string]struct{}
+
+    func New(...string) Set { ... }
+    func (s Set) Sort() []string { ... }
+
+    // This change makes the client even simpler. There would only be one reference to the
+    set := stringset.New("c", "a", "b")
+    fmt.Println(set.Sort())
+    ```
