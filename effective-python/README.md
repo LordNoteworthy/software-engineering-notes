@@ -834,3 +834,26 @@ log('Hi there') # Much better
 - **Keyword-only** arguments **force** callers to supply certain arguments by keyword (instead of by position), which makes the **intention** of a function call **clearer**. Keyword-only arguments are defined after a single `*` in the argument list.
 - **Positional-only** arguments ensure that callers can’t supply certain parameters using keywords, which helps **reduce coupling**. Positional-only arguments are defined before a single `/` in the argument list.
 - Parameters between the `/` and `*` characters in the argument list may be supplied by position or keyword, which is the default for Python parameters.
+
+### Item 26: Define Function Decorators with functools.wraps
+
+- Decorators has an unintended side effect. The value returned by the decorator — the function that’s called above — doesn’t
+think it’s named `fibonacci`:
+```sh
+fibonacci = trace(fibonacci) // trace is the decorator function.
+print(fibonacci)
+>>>
+<function trace.<locals>.wrapper at 0x108955dc0>
+```
+- This behavior is problematic because it undermines tools that do **introspection**, such as **debuggers**.
+  - 👎 The *help* built-in function is useless when called on the decorated `fibonacci` function. It should instead print out the docstring.
+  - 👎 Object **serializers** break because they can’t determine the **location** of the original function that was decorated.
+- 👍 The solution is to use the `wraps` helper function from the `functools` built-in module. This is a decorator that helps you write decorators.
+  - When you apply it to the wrapper function, it **copies** all of the important **metadata** about the inner function to the outer function.
+  - Beyond these examples, Python functions have many other standard attributes (e.g., `__name__`, `__module__`, `__annotations__`) that must be preserved to maintain the interface of functions in the language.
+  - 👍 Using `wraps` ensures that you’ll always get the correct behavior.
+
+📆 Things to Remember
+- Decorators in Python are syntax to allow one function to modify another function at runtime.
+- Using decorators can cause strange behaviors in tools that do introspection, such as debuggers.
+- Use the `wraps` decorator from the `functools` built-in module when you define your own decorators to avoid issues.
