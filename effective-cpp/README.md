@@ -679,7 +679,7 @@ result = 2 * oneHalf                    // error!
   - 👎 No ! the opposite of a member function is a **non-member** function, not a **friend** function.
 
 📆 Things to Remember
-- If you need type conversions on all parameters to a function (including the one that would otherwise be pointed to by the this pointer),
+- If you need type conversions on all parameters to a function (including the one that would otherwise be pointed to by the `this` pointer),
 the function must be a non-member.
 
 ### Item 25: Consider support for a non-throwing swap.
@@ -1634,8 +1634,78 @@ class SmartPtr {
     shared_ptr& operator=(shared_ptr<Y> const& r); // copy assignment
     ...
   };
-```
+  ```
 
 📆 Things to Remember
 - Use member function templates to generate functions that accept all compatible types.
 - If you declare member templates for generalized copy construction or generalized assignment, you’ll still need to declare the normal copy constructor and copy assignment operator, too
+
+### Item 46: Define non-member functions inside templates when type conversions are desired
+
+- This Item extends the discussion with a seemingly innocuous modification to *Item 24*’s example: it **templatizes** both `Rational` and `operator*`:
+  ```cpp
+  template<typename T>
+  class Rational {
+  public:
+    Rational(const T& numerator = 0, // see Item 20 for why params
+    const T& denominator = 1); // are now passed by reference
+    const T numerator() const; // see Item 28 for why return
+    const T denominator() const; // values are still passed by value,
+    ... // Item 3 for why they’re const
+  };
+  template<typename T>
+  const Rational<T> operator*(const Rational<T>& lhs, const Rational<T>& rhs)
+  ```
+- We want to support **mixed-mode arithmetic**, so we want the code below to compile:
+  ```cpp
+  Rational<int> oneHalf(1, 2); // this example is from Item 24,  except Rational is now a template
+  Rational<int> result = oneHalf * 2; // error! won’t compile.
+  ```
+- `operator*`’s second parameter is declared to be of type` Rational<T>`, but the second argument passed to `operator*` is of type `int`. How are compilers to figure out what `T` is in this case?
+  - ▶️ They don’t, because **implicit type conversion functions** are never considered during **template argument deduction**.
+- We can relieve compilers of the challenge of template argument deduction by taking advantage of the fact that a **friend** declaration in a template class can refer to a specific function.
+  ```cpp
+  template<typename T>
+  class Rational {
+  public:
+    friend const Rational operator*(const Rational& lhs, const Rational& rhs);
+  };
+
+  template<typename T> const Rational<T> operator*(const Rational<T>& lhs, const Rational<T>& rhs)
+  ...
+  ```
+- As a **declared function** (not a function template), compilers can use implicit conversion functions (such as Rational’s non-explicit constructor) when calling it, and that’s how they make the mixed-mode call succeed.
+
+> The name of the template can be used as shorthand for the template and its parameters, so inside `Rational<T>`, we can just write `Rational` instead of `Rational<T>` 👍.
+- Although the code will compile, it won’t link: If we declare a function ourselves (which is what we’re doing inside the `Rational` template), we’re also responsible for defining that function. In this case, we never provide a definition, and that’s why linkers can’t find one.
+- The simplest thing that could possibly work is to merge the body of `operator*` into its declaration:
+  ```cpp
+  template<typename T>
+  class Rational {
+  public:
+    ...
+    friend const Rational operator*(const Rational& lhs, const Rational& rhs) {
+      return Rational(lhs.numerator() * rhs.numerator(), lhs.denominator() * rhs.denominator());
+    }
+    }
+  ```
+- An interesting observation about this technique is that the use of **friendship** has nothing to do with a need to **access non-public parts** of the class. In order to make type conversions possible on all arguments, we need a **non-member** function (*Item 24* still applies); and in order to have the proper function automatically instantiated, we need to declare the function **inside** the class. The only way to declare a nonmember function inside a class is to make it a **friend**. So that’s what we do.
+- As *Item 30* explains, functions defined inside a class are implicitly declared **inline**, and that includes **friend functions** like `operator*`.
+  - You can minimize the impact of such inline declarations by having `operator*` do nothing but **call a helper function** defined outside of the class.
+  ```cpp
+  template<typename T>
+  const Rational<T> doMultiply( const Rational<T>& lhs, const Rational<T>& rhs);
+
+  template<typename T>
+  class Rational {
+  public:
+    ...
+    friend const Rational<T> operator*(const Rational<T>& lhs, const Rational<T>& rhs) {
+      return doMultiply(lhs, rhs); // Have friend call helper
+    }
+  ...
+  };
+  ```
+
+📆 Things to Remember
+- When writing a class template that offers functions related to the template that support implicit type conversions on all parameters, define those functions as friends inside the class template.
