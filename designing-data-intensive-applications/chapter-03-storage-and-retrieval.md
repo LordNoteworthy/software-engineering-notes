@@ -36,21 +36,27 @@
 
 ### Constructing and maintaining SSTables
 
-- Maintaining a sorted structure on disk is possible, but maintaining it in memory is much easier. There are plenty of well-known tree data structures that you can use, such as _Red-Black trees_ or _AVL_ trees. With these data structures, you can insert keys in any order, and read them back in sorted order.
+- Maintaining a sorted structure on disk is possible, but maintaining it in memory is much easier. There are plenty of well-known tree data structures that you can use, such as _Red-Black trees_ or _AVL_ trees. With these data structures, you can insert keys in any order, and read them back in **sorted** order.
 - When a write comes in, add it to an in-memory balanced tree data structure. This in-memory tree is sometimes called a **memtable**.
-- When the memtable gets bigger than some threshold—typically a few megabytes—write it out to disk as an SSTable file. This can be done efficiently because the tree already maintains the key-value pairs sorted by key. The new SSTable file becomes the most recent segment of the database. When the new SSTable is ready, the memtable can be emptied.
-- The basic idea —keeping a cascade of SSTables that are merged in the background— is simple and effective. Even when the dataset is much bigger than memory it continues to work well. Since data is stored in sorted order, you can efficiently perform range queries (scanning all keys above some minimum and up to some maximum). And because the disk writes are sequential, the LSM-tree can support remarkably **high write throughput**.
+- When the memtable gets bigger than some threshold — typically a few megabytes — write it out to disk as an **SSTable** file. This can be done efficiently because the tree already maintains the key-value pairs sorted by key. The new SSTable file becomes the most recent segment of the database. When the new SSTable is ready, the memtable can be emptied.
+- The basic idea - keeping a cascade of SSTables that are merged in the **background** - is simple and effective. Even when the dataset is much bigger than memory it continues to work well. Since data is stored in sorted order, you can efficiently perform range queries (scanning all keys above some minimum and up to some maximum). And because the disk writes are sequential, the LSM-tree can support remarkably **high write throughput**.
 
 ### Making an LSM-tree out of SSTables
 
-- :star: The algorithm described here is essentially what is used in **LevelDB** and **RocksDB**, key-value storage engine libraries.
+- ⭐The algorithm described here is essentially what is used in **LevelDB** and **RocksDB**, key-value storage engine libraries.
+- Originally this indexing structure was described by *Patrick O’Neil* under the name **Log-Structured Merge-Tree** building on earlier work on log-structured filesystems. Storage engines that are based on this principle of merging and compacting sorted files are often called **LSM storage engines**
+- ⭐ **Lucene**, an indexing engine for FTS used by **Elasticsearch** and **Solr**, uses a similar method for storing its term dictionary. A full-text index is much more
+complex than a KV index but is based on a similar idea:
+  - Given a word in a search query, find all the documents that mention the word. This is implemented with a KV structure where the key is a word (a **term**) and the value is the list of IDs of all the documents that contain the word (the **postings list**). In Lucene, this mapping from term to postings list is kept in SSTable-like sorted files, which are merged in the background as needed.
 
 ### Performance optimizations
 
 - LSM-tree algorithm can be **slow** when looking up keys that do **not exist** in the database:
-  1. you have to check the memtable,
-  2. then the segments all the way back to the oldest (possibly having to read from disk for each one) before you can be sure that the key does not exist.
+  1. You have to check the memtable,
+  2. Then the segments all the way back to the **oldest** (possibly having to read from disk for each one) before you can be sure that the key does not exist.
 - In order to optimize this kind of access, storage engines often use additional **Bloom filters**.
+- There are also different strategies to determine the **order** and **timing** of how SSTables are compacted and merged. The most common options are **size-tiered** and **leveled compaction**.
+  - ▶️ **LevelDB** and **RocksDB** use leveled compaction (hence the name of Lev‐lDB), **HBase** uses size-tiered, and **Cassandra** supports both.
 
 ## B-trees
 
@@ -59,6 +65,32 @@
 - The **log-structured indexes** we saw earlier break the database down into **variable-size segments**, typically several megabytes or more in size, and always write a segment sequentially. By contrast, **B-trees** break the database down into **fixed-size blocks** or pages, traditionally `4 kB` in size, and read or write one page at a time. This corresponds more closely to the underlying hardware, as disks are also arranged in fixed-size blocks.
 - Each page can be identified using an address or location, which allows one page to refer to another—similar to a **pointer**, but on disk instead of in memory. We can use these page references to construct a tree of pages: <p align="center"><img src="assets/b-trees-structure.png"></p>
 - The number of references to child pages in one page of the B-tree is called the **branching factor**.
+- A four-level tree of 4 KB pages with a branching factor of 500 can store up to 256 TB 🆗.
+
+### Making B-trees reliable
+
+- Some operations require several **different pages** to be overwritten. For example, if you split a page because an insertion caused it to be overfull, you need to write the two pages that were split, and also overwrite their parent page to update the references to the two child pages.
+  - ⚠️ This is a dangerous operation, because if the DB crashes after only some of the pages have been written, you end up with a corrupted index.
+  - In order to make the DB resilient to crashes, it is common for B-tree implementations to include an additional data structure on disk: a **write-ahead log** (WAL, also known as a *redo log*). This is an append-only file to which every B-tree modification must be written before it can be applied to the pages of the tree itself. When the DB comes back up after a crash, this log is used to restore the B-tree back to a consistent state.
+- An additional complication of updating pages in place is that careful **concurrency** control is required if multiple threads are going to access the B-tree at the same time - otherwise a thread may see the tree in an inconsistent state.
+  - This is typically done by protecting the tree’s data structures with **latches** (lightweight locks). Log-structured approaches are simpler in this regard, because they do all the merging in the background **without interfering** with incoming queries and atomically swap old segments for new segments from time to time.
+
+### B-tree optimizations
+
+- Instead of overwriting pages and maintaining a WAL for crash recovery, some databases (like **LMDB**) use a CoW scheme.
+- We can save space in pages by not storing the entire key, but **abbreviating** it. keys only need to provide enough information to act as boundaries between key ranges.
+  - ▶️ Packing more keys into a page allows the tree to have a **higher branching factor**, and thus **fewer levels**.
+
+### Comparing B-Trees and LSM-Trees
+
+- As a rule of thumb, LSM-trees are typically faster for **writes**, whereas B-trees are thought to be faster for **reads**.
+- Reads are typically slower on LSM-trees because they have to check several different data structures and SSTables at different stages of compaction.
+- 👍 Advantages of LSM-trees:
+  - A B-tree index must write every piece of data at least **twice**: once to the write-ahead log, and once to the tree page itself (and perhaps again as pages are split).
+  - Log-structured indexes also rewrite data **multiple** times due to repeated compaction and merging of SSTables. This effect —one write to the database resulting in multiple writes to the disk over the course of the database’s lifetime— is known as **write amplification**.
+  - LSM-trees are typically able to sustain **higher write throughput** than Btrees, partly because they sometimes have **lower write amplification** (although this depends on the storage engine configuration and workload), and partly because they **sequentially** write compact SSTable files rather than having to overwrite several pages in the tree. This difference is particularly important on magnetic hard drives, where sequential writes are much faster than random writes.
+  - LSM-trees can be **compressed** better, and thus often produce smaller files on disk than B-trees.
+
 
 ## Multi-column indexes
 
