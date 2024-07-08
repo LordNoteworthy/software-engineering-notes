@@ -483,3 +483,20 @@ function **can’t return an error**. Therefore, we have to delay the validation
     set := stringset.New("c", "a", "b")
     fmt.Println(set.Sort())
     ```
+
+## #14 Ignoring package name collisions
+
+- Package collisions occur when a **variable name** collides with an existing **package name**, preventing the package from being reused:
+    ```go
+    redis := redis.NewClient() // Calls NewClient from the redis package
+    v, err := redis.Get("foo") // Uses the redis variable
+    ```
+- Two solutions:
+  - Change the variable name to `redisClient` for example.
+  - Create an alias for the `redis` package: `import redisapi "mylib/redis"`
+- One option could also be to use **dot imports** to access all the public elements of a package without the package qualifier ▶️ increase confusion !
+- We should avoid naming collisions between a **variable** and a **built-in** function. For example, we could do something like this:
+    ```go
+    copy := copyFile(src, dst) // The copy variable collides with the copy built-in function.
+    ```
+- 👍 In summary, we should prevent variable name collisions to avoid **ambiguity**.
