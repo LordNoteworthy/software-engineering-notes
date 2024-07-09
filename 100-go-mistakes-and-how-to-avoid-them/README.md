@@ -501,7 +501,7 @@ function **can’t return an error**. Therefore, we have to delay the validation
     ```
 - 👍 In summary, we should prevent variable name collisions to avoid **ambiguity**.
 
-## 2.15 #15: Missing code documentation
+## #15: Missing code documentation
 
 - First, every **exported** element must be **documented**.
 - The convention is to add comments, starting with the **name** of the exported element.
@@ -525,3 +525,9 @@ function **can’t return an error**. Therefore, we have to delay the validation
     package math
     ```
 - The first line of a package comment should be **concise**. That’s because it will appear in the package. Then, we can provide all the information we need in the following lines.
+
+## #16: Not using linters
+
+- A linter is an automatic tool to analyze code and catch errors.
+- `Golint` (deprecated now) is the linter that is developer by Google. There's no drop-in replacement for it, but tools such as `Staticcheck` and `go vet` should be used instead.
+- `golangci-lint` integrate almost all community driven linters.
