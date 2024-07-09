@@ -500,3 +500,28 @@ function **can’t return an error**. Therefore, we have to delay the validation
     copy := copyFile(src, dst) // The copy variable collides with the copy built-in function.
     ```
 - 👍 In summary, we should prevent variable name collisions to avoid **ambiguity**.
+
+## 2.15 #15: Missing code documentation
+
+- First, every **exported** element must be **documented**.
+- The convention is to add comments, starting with the **name** of the exported element.
+- As a convention, each comment should be a **complete sentence** that ends with **punctuation**.
+- When we document a function, we should highlight what the function **intends to do**, not how it does it ⚠️; this belongs to the **core** of a function and comments, not documentation.
+- 💡 We should ideally provide enough information that the consumer does not have to look at our code to understand how to use an exported element.
+- When it comes to documenting a **variable** or a **constant**, we might be interested in conveying two aspects: its **purpose** and its **content**.
+  - The **former** should live as **code documentation** to be useful for external clients.
+  - The latter, though, **shouldn’t** necessarily be **public**. For example:
+    ```go
+    // DefaultPermission is the default permission used by the store engine.
+    const DefaultPermission = 0o644 // Need read and write accesses.
+    ```
+- This constant represents the default permission. The code documentation conveys its purpose, whereas the comment alongside the constant describes its actual content.
+- To help clients and maintainers understand a package’s scope, we should also document each **package**. The convention is to start the comment with *// Package* followed by the package name:
+    ```go
+    // Package math provides basic constants and mathematical functions.
+    //
+    // This package does not guarantee bit-identical results
+    // across architectures.
+    package math
+    ```
+- The first line of a package comment should be **concise**. That’s because it will appear in the package. Then, we can provide all the information we need in the following lines.
