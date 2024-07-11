@@ -1709,3 +1709,94 @@ class SmartPtr {
 
 📆 Things to Remember
 - When writing a class template that offers functions related to the template that support implicit type conversions on all parameters, define those functions as friends inside the class template.
+
+### Item 47: Use traits classes for information about types.
+
+- **Traits** allow you to get information about a **type** during **compilation**.
+- Traits aren’t a keyword or a predefined construct in C++; they’re a **technique** and a **convention** followed by C++ programmers.
+- The fact that traits must work with **built-in** types means that things like **nesting** information inside types won’t do, because there’s no way to nest information inside pointers.
+  - ▶️ The traits information for a type, then, must be **external** to the type. The standard technique is to put it into a **template** and **one or more specializations** of that template.
+- For iterators, the template in the standard library is named `iterator_traits`:
+  ```cpp
+  template<typename IterT> // template for information about
+  struct iterator_traits; // iterator types
+  ```
+- By convention, traits are always implemented as **structs**. Another convention is that the structs
+used to implement traits are known as **traits classes**.
+- The way iterator_traits works is that for each type `IterT`, a typedef named `iterator_category` is declared in the struct `iterator_traits<IterT>`. This typedef identifies the iterator **category** of `IterT`.
+- `iterator_traits` implements this in two parts.
+- **First**, it imposes the requirement that any user-defined iterator type must contain a nested `typedef` named `iterator_category` that identifies the appropriate **tag struct**. **deque’s** iterators are random access, for example, so a class for *deque* iterators would look something like this:
+  ```cpp
+  template < ... > // template params elided
+  class deque {
+  public:
+    class iterator {
+    public:
+      typedef random_access_iterator_tag iterator_category;
+    ...
+    };
+    ...
+  };
+
+  // iterator_traits just parrots back the iterator class’s nested typedef:
+  // the iterator_category for type IterT is whatever IterT says it is;
+  template<typename IterT>
+  struct iterator_traits {
+  typedef typename IterT::iterator_category iterator_category;
+    ...
+  };
+  ```
+  - This works well for user-defined types, but it doesn’t work at all for iterators that are **pointers**, because there’s no such thing as a pointer with a nested typedef.
+- The **second** part of the `iterator_traits` implementation handles iterators that are pointers.
+  - To support such iterators, `iterator_traits` offers a **partial template specialization** for pointer types. Pointers act as random access iterators, so that’s the category `iterator_traits` specifies for them:
+  ```cpp
+  template<typename T> // partial template specialization
+  struct iterator_traits<T*> { // for built-in pointer types
+    typedef random_access_iterator_tag iterator_category;
+  ...
+  };
+  ```
+- Given `std::iterator_traits`, we can refine our pseudocode for `advance`:
+  ```cpp
+  template<typename IterT, typename DistT>
+  void advance(IterT& iter, DistT d) {
+    if (typeid(typename std::iterator_traits<IterT>::iterator_category) ==
+      typeid(std::random_access_iterator_tag))
+  ...
+  }
+  ```
+- Although this looks promising, it’s not what we want 🤷:
+  - `IterT`’s type is known during **compilation**, so `iterator_traits<IterT>::iterator_category` can
+also be determined during compilation. Yet the if statement is evaluated at **runtime** ‼️
+  - Why do something at **runtime** that we can do during **compilation** ❓
+  - What we really want is a **conditional** construct (i.e., an `if`...`else` statement) for types that is evaluated during **compilation**.
+  - 💡 Solution is to create multiple versions of an overloaded function containing the “guts” of `advance`, declaring each to take a different type of `iterator_category` object. I use the name `doAdvance` for these functions:
+  ```cpp
+  template<typename IterT, typename DistT> // use this impl for random access iterators
+  void doAdvance(IterT& iter, DistT d, std::random_access_iterator_tag) {
+    iter += d;
+  }
+  template<typename IterT, typename DistT> // use this impl for bidirectional iterators
+  void doAdvance(IterT& iter, DistT d, std::bidirectional_iterator_tag) {
+    if (d >= 0) { while (d--) ++iter; }
+    else { while (d++) --iter; }
+  }
+  template<typename IterT, typename DistT> // use this impl for input iterators
+  void doAdvance(IterT& iter, DistT d, std::input_iterator_tag) {
+    if (d < 0 ) { throw std::out_of_range("Negative distance"); }
+    while (d--) ++iter;
+  }
+
+  // Given the various overloads for doAdvance, all advance needs to do is call them,
+  // passing an extra object of the appropriate iterator category type so that the
+  // compiler will use overloading resolution to call the proper implementation:
+  template<typename IterT, typename DistT>
+  void advance(IterT& iter, DistT d) {
+    // call the version of doAdvance that is appropriate for iter’s iterator category.
+    doAdvance(iter, d, typename  std::iterator_traits<IterT>::iterator_category()))
+  }
+  ```
+
+📆 Things to Remember
+- Traits classes make information about types available during compilation. They’re implemented using templates and template specializations.
+- In conjunction with overloading, traits classes make it possible to perform compile-time if...else tests on types.

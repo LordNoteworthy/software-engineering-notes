@@ -18,7 +18,7 @@ Notes taken from reading the *100 Go Mistakes and How to Avoid Them* by Teiva Ha
 
 ## Chapter 2: Code and project organization
 
-## #1: Unintended variable shadowing
+### #1: Unintended variable shadowing
 
 - In Go, a variable name declared in a block can be redeclared in an inner block.
 - **Variable shadowing** occurs when a variable name is redeclared in an inner block, but we saw that this practice is prone to mistakes:
@@ -40,7 +40,7 @@ if tracing {
 // Use client
 ```
 
-## #2: Unnecessary nested code
+### #2: Unnecessary nested code
 
 - A critical aspect of **readability** is the number of **nested** levels.
 - In general, the more nested levels a function requires, the more complex it is to read and understand:
@@ -76,7 +76,7 @@ if tracing {
     // ...
     ```
 
-## #3: Misusing init functions
+### #3: Misusing init functions
 
 - Consider the example below:
     ```go
@@ -102,7 +102,7 @@ if tracing {
     - Unit tests can be more complicated because a function that depends on a global variable won’t be **isolated anymore**.
 - We should be cautious with `init` functions. They can be helpful in some situations, however, such as defining static configuration. Otherwise, and in most cases, we should handle initializations through ad-hoc functions.
 
-## #4: Overusing getters and setters
+### #4: Overusing getters and setters
 
 - Using **getters** and **setters** presents some advantages, including these:
     - They **encapsulate** a behavior associated with getting or setting a field, allowing new functionality to be added later (for example, validating a field, returning a computed value, or wrapping the access to a field around a mutex).
@@ -113,7 +113,7 @@ if tracing {
     - The setter method should be named `SetBalance`.
 - We shouldn’t **overwhelm** our code with getters and setters on structs if they don’t bring any value. We should be pragmatic and strive to find the right balance between efficiency and following idioms that are sometimes considered indisputable in other programming paradigms.
 
-## #5: Interface pollution
+### #5: Interface pollution
 
 - Interface pollution is about **overwhelming** our code with **unnecessary abstractions**, making it harder to understand.
 - What makes Go interfaces so different is that they are satisfied **implicitly**. There is no explicit keyword like *implements* to mark that an object `X` implements interface `Y`.
@@ -165,7 +165,7 @@ it implements `intConfigGetter`. Then, we can only read the configuration in the
 - The main caveat when programming meets abstractions is remembering that abstractions should be **discovered**, not **created**.
   - 🌟 *Don’t design with interfaces, discover them*.
 
-## #6: Interface on the producer side
+### #6: Interface on the producer side
 
 - **Producer** side — An interface defined in the same package as the concrete implementation.
 - **Consumer** side — An interface defined in an external package where it’s used. <p align="center"><img src="./assets/iface-producer-consumer.png" width="500px" height="auto"></p>
@@ -195,7 +195,7 @@ it implements `intConfigGetter`. Then, we can only read the configuration in the
 - The main point is that the `client` package can now define the most **accurate** abstraction for its need (here, only one method). It relates to the concept of the *Interface Segregation Principle* (the `I` in *SOLID*) ▶️ No client should be forced to depend on methods it doesn’t use.
 - An interface should live on the **consumer** side in most cases. However, in particular contexts (for example - in the standard library `encoding, encoding/json, encoding/binary`, when we know — not foresee—that an abstraction will be helpful for consumers), we may want to have it on the **producer** side. If we do, we should strive to keep it as **minimal** as possible, increasing its **reusability** potential and making it more easily **composable**.
 
-## #7: Returning interfaces
+### #7: Returning interfaces
 
 - We will consider two packages: `client`, which contains a `Store` interface and `store`, which contains an implementation of `Store`. <p align="center"><img src="./assets/store-client-dependency.png" width="500px" height="auto"></p>
 - The `client` package can’t call the `NewInMemoryStore` function anymore; otherwise, there would be a **cyclic dependency**.
@@ -207,7 +207,7 @@ it implements `intConfigGetter`. Then, we can only read the configuration in the
 abstraction.
 - Also, we will only be able to use the methods **defined** in the interface, and not the methods defined in the **concrete type**.
 
-## #8: any says nothing
+### #8: any says nothing
 
 - With Go 1.18, the predeclared type `any` became an alias for an **empty interface {}**.
 - In assigning a value to an `any` type, we **lose** all **type information**, which requires a type assertion to get anything useful out of the `i` variable.
@@ -233,7 +233,7 @@ abstraction.
   - In the `encoding/json` package. Because we can marshal any type, the `Marshal` function accepts an `any` argument.
   - Another example is in the `database/sql` package. If the query is parameterized (for example, `SELECT * FROM FOO WHERE id = ?`), the parameters could be any kind.
 
-## #9: Being confused about when to use generics
+### #9: Being confused about when to use generics
 
 - Go 1.18 adds generics to the language 🥳.
 -  👍 Few common uses where generics are recommended:
@@ -285,7 +285,7 @@ abstraction.
         - In this case, using generics won’t bring any value to our code whatsoever. We should make the `w` argument an `io.Writer` directly.
     - When it makes our code **more complex**: Generics are never mandatory, and as Go developers, we have lived without them for more than a decade. If we’re writing generic functions or structures and we figure out that it doesn’t make our code clearer, we should probably reconsider our decision for that particular use case.
 
-## #10: Not being aware of the possible problems with type embedding
+### #10: Not being aware of the possible problems with type embedding
 
 - 👎 The wolloing example is a wrong usage of type embedding. Since `sync.Mutex` is an embedded type, the `Lock` and `Unlock` methods will be **promoted**. Therefore, both methods become **visible** to external clients using `InMem`:
     ```go
@@ -325,7 +325,7 @@ abstraction.
     - It shouldn’t be used solely as some **syntactic sugar** to simplify accessing a field (such as `Foo.Baz()` instead of `Foo.Bar.Baz()`). If this is the only rationale, let’s not embed the inner type and use a field instead.
     - It shouldn’t promote data (fields) or a behavior (methods) we want to **hide** from the outside: for example, if it allows clients to access a locking behavior (`sync.Mutex`) that should remain **private** to the struct.
 
-## #11 Not using the functional options pattern
+### #11 Not using the functional options pattern
 
 - How can we implement passing an configuration option to a function in an API-friendly way? Let’s look at the different options.
 - **Config struct**:
@@ -429,7 +429,7 @@ function **can’t return an error**. Therefore, we have to delay the validation
     ```
   - 👍 Provides a handy and API-friendly way to handle options and represent the most idiomatic way. If the client needs the default configuration, it doesn’t have to provide an argument.
 
-## #12: Project misorganization
+### #12: Project misorganization
 
 - **Project structure**:
   - Go language maintainer has no strong convention about structuring a project in Go. However, one layout has emerged over the years: [project-layout](https://github.com/golang-standards/project-layout).
@@ -442,7 +442,7 @@ function **can’t return an error**. Therefore, we have to delay the validation
   - We should name our packages after what they **provide**, not what they **contain**. Also, naming should be **meaningful**. Therefore, a package name should be **short**, **concise**, **expressive**, and, by convention, a **single lowercase word**.
   - We should **minimize** what should be **exported** as much as possible to **reduce the coupling** between packages and keep unnecessary exported elements hidden. In doubt, default to not exporting it!
 
-## #13: Creating utility packages
+### #13: Creating utility packages
 
 - As a rule of thumb, creating **shared** packages without meaningful names isn’t a good idea; this includes utility packages such as `utils`, `common`, or `base`. Also, bear in mind that naming a package after what it provides and not what it contains can be an efficient way to increase its **expressiveness**.
 - Consider the following example:
@@ -484,7 +484,7 @@ function **can’t return an error**. Therefore, we have to delay the validation
     fmt.Println(set.Sort())
     ```
 
-## #14 Ignoring package name collisions
+### #14 Ignoring package name collisions
 
 - Package collisions occur when a **variable name** collides with an existing **package name**, preventing the package from being reused:
     ```go
@@ -501,7 +501,7 @@ function **can’t return an error**. Therefore, we have to delay the validation
     ```
 - 👍 In summary, we should prevent variable name collisions to avoid **ambiguity**.
 
-## #15: Missing code documentation
+### #15: Missing code documentation
 
 - First, every **exported** element must be **documented**.
 - The convention is to add comments, starting with the **name** of the exported element.
@@ -526,8 +526,12 @@ function **can’t return an error**. Therefore, we have to delay the validation
     ```
 - The first line of a package comment should be **concise**. That’s because it will appear in the package. Then, we can provide all the information we need in the following lines.
 
-## #16: Not using linters
+### #16: Not using linters
 
 - A linter is an automatic tool to analyze code and catch errors.
 - `Golint` (deprecated now) is the linter that is developer by Google. There's no drop-in replacement for it, but tools such as `Staticcheck` and `go vet` should be used instead.
 - `golangci-lint` integrate almost all community driven linters.
+
+## Chapter 3: Data types
+
+### #17: Creating confusion with octal literals
