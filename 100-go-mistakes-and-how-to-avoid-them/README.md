@@ -535,3 +535,17 @@ function **can’t return an error**. Therefore, we have to delay the validation
 ## Chapter 3: Data types
 
 ### #17: Creating confusion with octal literals
+
+- In Go, an integer literal starting with `0` is considered an **octal integer** (base 8).
+- Octal integers are useful in different scenarios. For instance, suppose we want to open a file using `os.OpenFile`. This function requires passing a permission as a `uint32`. If we want to match a Linux permission, we can pass an octal number for readability instead of a base 10 number:
+    ```go
+    file, err := os.OpenFile("foo", os.O_RDONLY, 0644)
+    ```
+- Using `0o` as a prefix instead of only `0` means the same thing. However, it can help make the code clearer.
+- Finally, we can also use an underscore character (`_`) as a separator for **readability**. For
+example, we can write 1 billion this way: `1_000_000_000`. We can also use the underscore character with other representations (for example, `0b00_00_01`).
+- In summary, Go handles **binary**, **hexadecimal**, **imaginary**, and **octal** numbers.
+  - Octal numbers start with a 0. However, to improve readability and **avoid potential mistakes** for future code readers, make octal numbers explicit using a `0o` prefix.
+
+### #18: Neglecting integer overflows
+
