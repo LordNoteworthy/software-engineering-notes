@@ -1766,6 +1766,7 @@ used to implement traits are known as **traits classes**.
   }
   ```
 - Although this looks promising, it’s not what we want 🤷:
+  - First, this will **fail** if when iter `isn’t` a **random access iterator** ⚠️.
   - `IterT`’s type is known during **compilation**, so `iterator_traits<IterT>::iterator_category` can
 also be determined during compilation. Yet the if statement is evaluated at **runtime** ‼️
   - Why do something at **runtime** that we can do during **compilation** ❓
@@ -1800,3 +1801,69 @@ also be determined during compilation. Yet the if statement is evaluated at **ru
 📆 Things to Remember
 - Traits classes make information about types available during compilation. They’re implemented using templates and template specializations.
 - In conjunction with overloading, traits classes make it possible to perform compile-time if...else tests on types.
+
+### Item 48: Be aware of template metaprogramming.
+
+- **Template metaprogramming** (TMP) is the process of writing template-based C++ programs that execute during **compilation**.
+- TMP has two great strengths.
+  1. It makes some things easy that would otherwise be hard or impossible.
+  2. Because template metaprograms execute during C++ compilation, they can **shift work** from runtime to compile-time.
+     - 👍 **errors** that are usually detected at **runtime** can be found during **compilation**.
+     - 👍 smaller executables, shorter runtimes, lesser memory requirements.
+     - 👎 compilation takes longer.
+- The same example we showed in the previous item can be solved with the usage of `typeid`:
+  ```cpp
+  template<typename IterT, typename DistT>
+  void advance(IterT& iter, DistT d) {
+    if ( typeid(typename std::iterator_traits<IterT>::iterator_category) ==
+        typeid(std::random_access_iterator_tag)) {
+      iter += d; // use iterator arithmetic for random access iters
+    }
+    else {
+      if (d >= 0) { while (d--) ++iter; } // use iterative calls to ++ or --
+      else { while (d++) --iter; }  // for other  iterator categories
+    }
+  }
+  ```
+  - *Item 47* notes that this **typeid**-based approach is less efficient than the one using **traits**, because with this approach:
+    1. The type testing occurs at runtime instead of during compilation.
+    2. The code to do the runtime type testing must be present in the executable.
+- TMP has been shown to be **Turing-complete**, which means that it is powerful enough to compute anything.
+  - Using TMP, you can declare variables, perform loops, write and call functions, etc.
+- For another glimpse into how things work in TMP, let’s look at loops:
+  - TMP has no real **looping construct**, so the effect of loops is accomplished via **recursion**.
+  - Even the recursion isn’t the normal kind, however, because TMP loops don’t involve recursive function calls, they involve **recursive template instantiations**.
+- The “*hello world*” program of TMP is computing a **factorial** during compilation 😄:
+  ```cpp
+  template<unsigned n> // general case: the value of
+  struct Factorial { // Factorial<n> is n times the value of Factorial<n-1>
+    enum { value = n * Factorial<n-1>::value };
+  };
+  template<> // special case: the value of Factorial<0> is 1
+  struct Factorial<0> {
+    enum { value = 1 };
+  };
+
+  std::cout << Factorial<5>::value; // prints 120
+  std::cout << Factorial<10>::value; // prints 3628800
+  ```
+- To grasp why TMP is worth knowing about, it’s important to have a better understanding of what it can accomplish. Here are three examples:
+  - **Optimizing matrix operations**:
+    - *Item 21* explains that some functions, including `operator*`, must return new objects, and *Item 44* introduces the `SquareMatrix` class, so consider the following code:
+    ```cpp
+    typedef SquareMatrix<double, 10000> BigMatrix;
+    BigMatrix m1, m2, m3, m4, m5;
+    BigMatrix result = m1 * m2 * m3 * m4 * m5;
+    ```
+    - Calculating result in the “normal” way calls for the creation of **four temporary** matrices, one for the result of each call to` operator*`.
+  - Using an advanced template technology related to TMP called **expression templates**, it’s possible to eliminate the temporaries and merge the loops, all without changing the syntax of the client code above.
+  - **Generating custom design pattern implementations**:
+    - Design patterns like *Strategy*, *Observer*, *Visitor*, etc. can be implemented in many ways.
+    - Using a TMP-based technology called *policy-based design*, it’s possible to create templates representing independent design choices (“policies”) that can be combined in arbitrary ways to yield pattern implementations with custom behavior.
+
+📆 Things to Remember
+- Template metaprogramming can shift work from runtime to compile-time, thus enabling earlier error detection and higher runtime performance.
+- TMP can be used to generate custom code based on combinations of policy choices, and it can also be used to avoid generating code inappropriate for particular types.
+
+## Chapter 8: Customizing new and delete
+
