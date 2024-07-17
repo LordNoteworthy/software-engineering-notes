@@ -549,3 +549,41 @@ example, we can write 1 billion this way: `1_000_000_000`. We can also use the u
 
 ### #18: Neglecting integer overflows
 
+- Suppose we want to initialize an `int32` to its maximum value and then increment it. What should be the behavior of this code?
+    ```go
+    var counter int32 = math.MaxInt32
+    counter++
+    fmt.Printf("counter=%d\n", counter)
+    ```
+- This code compiles and doesn’t panic at run time. However, the `counter++` statement generates an integer overflow: `counter=-2147483648` ‼️
+- An **integer overflow** occurs when an arithmetic operation creates a value outside the range that can be represented with a given number of bytes.
+- Because an `int32` is a **signed** integer, the bit on the left represents the integer’s sign: `0` for positive, `1` for negative. If we increment this integer, there is no space left to represent the new value. Hence, this leads to an integer overflow.
+- In Go, an integer overflow that can be detected at **compile** time generates a compilation error. However, at **run time**, an integer **overflow** or **underflow** is **silent**; this does not lead to an application panic ⚠️.
+- How can we detect an integer overflow during an **addition**? The answer is to reuse `math.MaxInt`:
+    ```go
+    func AddInt(a, b int) int {
+        if a > math.MaxInt-b {
+            panic("int overflow")
+        }
+        return a + b
+    }
+    ```
+- **Multiplication** is a bit more complex to handle. We have to perform checks against the minimal integer, `math.MinInt`:
+    ```go
+    func MultiplyInt(a, b int) int {
+        if a == 0 || b == 0 {
+            return 0
+        }
+        result := a * b
+        if a == 1 || b == 1 {
+            return result
+        }
+        if a == math.MinInt || b == math.MinInt {
+            panic("integer overflow")
+        }
+        if result/b != a {
+            panic("integer overflow")
+        }
+        return result
+    }
+    ```
