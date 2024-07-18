@@ -1867,3 +1867,65 @@ also be determined during compilation. Yet the if statement is evaluated at **ru
 
 ## Chapter 8: Customizing new and delete
 
+### Item 49: Understand the behavior of the new-handler
+
+- Before operator `new` throws an exception in response to an **unsatisfiable request for memory**, it calls a client-specifiable error-handling function called a `new-handler`.
+  ```cpp
+  namespace std {
+    typedef void (*new_handler)();
+    new_handler set_new_handler(new_handler p) throw();
+  }
+  ```
+  - `new_handler` is a *typedef* for a pointer to a function that takes and returns nothing, and `set_new_handler` is a function that takes and returns a `new_handler`.
+  - `set_new_handler’s` parameter is a pointer to the function operator new should call if it can’t allocate the requested memory. The return value of `set_new_handler` is a pointer to the function in effect for that purpose before `set_new_handler` was called.
+- When operator `new` is unable to fulfill a memory request, it calls the `new-handler` function repeatedly until it can find enough memory; a well-designed `newhandler` function must do one of the following:
+  - **Make more memory available**:  allocate a large block of memory at program start-up, then release it for use in the program the first time the `new-handler` is invoked.
+  - **Install a different new-handler**: if the current `new-handler` can’t make any more memory available, perhaps it knows of a different `new-handler` that can.
+  - **Deinstall the new-handler**, i.e., pass the **null** pointer to `set_new_handler`. With no `new-handler` installed, operator new will **throw** an exception when memory allocation is unsuccessful.
+  - **Throw an exception** of type `bad_alloc` or some type derived from `bad_alloc`. Such exceptions will not be caught by operator `new`, so they will **propagate** to the site originating the request for memory.
+  - **Not return**, typically by calling `abort` or `exit`.
+- The **class’s** `set_new_handler` allows clients to specify the new-handler for the class (exactly like the standard `set_new_handler` allows clients to specify the global `new-handler`). The class’s operator `new` ensures that the **class-specific** new-handler is used in place of the **global** new-handler when memory for class objects is allocated:
+  ```cpp
+  class Widget {
+  public:
+    static std::new_handler set_new_handler(std::new_handler p) throw();
+    static void* operator new(std::size_t size) throw(std::bad_alloc);
+  private:
+    static std::new_handler currentHandler;
+  };
+
+  // Static class members must be defined outside the class definition, so:
+  std::new_handler Widget::currentHandler = 0; // init to null in the class impl. file
+
+  std::new_handler Widget::set_new_handler(std::new_handler p) throw() {
+    std::new_handler oldHandler = currentHandler;
+    currentHandler = p;
+    return oldHandler;
+  }
+  ```
+- Here is how it looks like if we use a resource handling class, which consists of nothing more than the fundamental RAII operations of acquiring a resource during construction and releasing it during destruction:
+  ```cpp
+  class NewHandlerHolder {
+  public:
+    explicit NewHandlerHolder(std::new_handler nh) : handler(nh) {} // acquire current new-handler
+    ~NewHandlerHolder() { std::set_new_handler(handler); } // release it
+  private:
+    std::new_handler handler; // remember it
+    NewHandlerHolder(const NewHandlerHolder&); // prevent copying
+    NewHandlerHolder& operator=(const NewHandlerHolder&);
+  };
+
+  // This makes implementation of Widget’s operator new quite simple:
+  void* Widget::operator new(std::size_t size) throw(std::bad_alloc) {
+    NewHandlerHolder h(std::set_new_handler(currentHandler)); // install Widget’s new-handler
+    return ::operator new(size); // allocate memory or throw
+  } // restore global
+  ```
+- The code for implementing this scheme is the same regardless of the class, so a reasonable goal would be to reuse it in other places.
+  - An easy way to make that possible is to create a “mixin-style” base class, i.e., a base class that’s designed to **allow derived classes to inherit a single specific capability** — in this case, the ability to set a class-specific `newhandler`. Then turn the base class into a **template**, so that you get a different copy of the class data for each inheriting class 🦊. This technique is called: It’s called *the curiously recurring template pattern (CRTP)*.
+
+📆 Things to Remember
+- `set_new_handler` allows you to specify a function to be called when memory allocation requests cannot be satisfied.
+- `Nothrow` `new` is of limited utility, because it applies only to memory allocation; associated constructor calls may still throw exceptions ⚠️.
+
+### Item 50: Understand when it makes sense to replace new and delete.
