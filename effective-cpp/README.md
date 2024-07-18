@@ -1929,3 +1929,38 @@ also be determined during compilation. Yet the if statement is evaluated at **ru
 - `Nothrow` `new` is of limited utility, because it applies only to memory allocation; associated constructor calls may still throw exceptions ⚠️.
 
 ### Item 50: Understand when it makes sense to replace new and delete.
+
+- Why would anybody want to replace the compiler-provided versions of operator `new` or operator `delete` in the first place? These are three of the most common reasons:
+  -  **To detect usage errors**: Custom operator news can over-allocate blocks so there’s room to put known byte patterns (“signatures”) before and after the memory made available to clients.
+operator deletes can check to see if the signatures are still intact.
+  -  **To improve efficiency**: If you have a good understanding of your program’s dynamic memory usage patterns, you can often find that custom versions of operator `new` and operator `delete` outperform the default ones.
+  -  **To collect usage statistics**: Before heading down the path of writing custom news and deletes, it’s prudent to gather information about how your software uses its dynamic memory. Custom versions of operator `new` and operator `delete` make it easy to collect this kind of information.
+- In concept, writing a custom operator new is pretty easy. For example, here’s a quick first pass at a global operator `new` that facilitates the detection of under- and overruns:
+  ```cpp
+  static const int signature = 0xDEADBEEF;
+  typedef unsigned char Byte;
+  // this code has several flaws
+  void* operator new(std::size_t size) throw(std::bad_alloc) {
+    using namespace std;
+    // increase size of request so 2 signatures will also fit inside
+    size_t realSize = size + 2 * sizeof(int);
+    void *pMem = malloc(realSize); // call malloc to get the actual memory
+    if (!pMem) throw bad_alloc();
+    // write signature into first and last parts of the memory
+    *(static_cast<int*>(pMem)) = signature;
+    *(reinterpret_cast<int*>(static_cast<Byte*>(pMem)+realSize-sizeof(int))) = signature;
+    // return a pointer to the memory just past the first signature
+    return static_cast<Byte*>(pMem) + sizeof(int);
+  }
+- In practice, we need to take care of issues such as: **alignment**.
+  - Because C++ requires that all operator `news` return pointers that are suitably aligned for any data type.
+- Adding to what we mentioned above about when it can make sense to replace the default versions of `new` and `delete`:
+  - **To increase the speed of allocation and deallocation**: General purpose allocators are often (though not always) a lot slower than custom versions, especially if the custom versions are designed for objects of a particular type.
+    - If your app is **single-threaded**, but your compilers’ default memory management routines are **threadsafe**, you may be able to win measurable speed improvements by writing thread-unsafe allocators.
+    - **To reduce the space overhead of default memory management**: General-purpose memory managers often use more memory, too. That’s because they often incur some overhead for each allocated block.
+    - **To compensate for suboptimal alignment in the default allocator**: The operator `news` that ship with some compilers don’t guarantee eight-byte alignment for dynamic allocations of doubles. In such cases, replacing the default operator new with one that guarantees eight-byte alignment could yield big increases in program performance.
+    - **To cluster related objects near one another.**: If you know that particular data structures are generally used together and you’d like to minimize the frequency of page faults when working on the data, it can make sense to create a **separate heap** for the data structures so they are clustered together on as few pages as possible.
+    - **To obtain unconventional behavior**: Sometimes you want operators `new` and `delete` to do something that the compiler-provided versions don’t offer. For example, you might want to allocate and deallocate blocks in shared memory, but have only a *C API* through which to manage that memory. Writing custom versions of `new` and `delete` would allow you to drape the C API in C++ clothing. As another example, you might write a custom operator `delete` that overwrites deallocated memory with **zeros** in order to increase the **security** of app data.
+
+📆 Things to Remember
+- There are many valid reasons for writing custom versions of `new` and `delete`, including improving performance, debugging heap usage errors, and collecting heap usage information.
