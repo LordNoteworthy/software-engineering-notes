@@ -857,3 +857,43 @@ print(fibonacci)
 - Decorators in Python are syntax to allow one function to modify another function at runtime.
 - Using decorators can cause strange behaviors in tools that do introspection, such as debuggers.
 - Use the `wraps` decorator from the `functools` built-in module when you define your own decorators to avoid issues.
+
+## Chapter 4: Comprehensions and Generators
+
+### Item 27: Use Comprehensions Instead of map and filter
+
+- Python provides compact syntax for **deriving a new list** from another *sequence* or *iterable*. These expressions are called list comprehensions:
+   ```python
+   squares = [x**2 for x in a] # List comprehension`.
+   ```
+- Unless you’re applying a single-argument function, list comprehensions are also **clearer** than the `map` built-in function for simple cases.
+  - `map` requires the creation of a `lambda` function for the computation, which is visually noisy:
+   ```python
+   alt = map(lambda x: x ** 2, a)
+   ```
+- Unlike `map`, list comprehensions let you easily **filter** items from the input list, removing corresponding outputs from the result:
+   ```python
+   even_squares = [x**2 for x in a if x % 2 == 0]
+   ```
+The `filter` built-in function can be used along with `map` to achieve the same outcome, but it is much harder to read:
+   ```python
+   alt = map(lambda x: x**2, filter(lambda x: x % 2 == 0, a))
+   ```
+- Dictionaries and sets have their own equivalents of list comprehensions (called **dictionary comprehensions** and **set comprehensions**,
+respectively). These make it easy to create other types of derivative data structures when writing algorithms:
+   ```python
+   even_squares_dict = {x: x**2 for x in a if x % 2 == 0}
+   threes_cubed_set = {x**3 for x in a if x % 3 == 0}
+   ```
+- Achieving the same outcome is possible with `map` and `filter` if you wrap each call with a corresponding constructor. These statements get so long that you have to break them up across multiple lines, which is even **noisier** and should be **avoided**:
+   ```python
+   alt_dict = dict(map(lambda x: (x, x**2),
+   filter(lambda x: x % 2 == 0, a)))
+   alt_set = set(map(lambda x: x**3,
+   filter(lambda x: x % 3 == 0, a)))
+   ```
+
+📆 Things to Remember
+- List comprehensions are **clearer** than the map and filter built-in functions because they **don’t require lambda** expressions.
+- List comprehensions allow you to easily skip items from the input list, a behavior that map doesn’t support without help from filter.
+- Dictionaries and sets may also be created using comprehensions.
