@@ -587,3 +587,36 @@ example, we can write 1 billion this way: `1_000_000_000`. We can also use the u
         return result
     }
     ```
+
+### #19: Not understanding floating points
+
+- To avoid bad surprises, we need to know that floating-point arithmetic is an approximation of real arithmetic.
+  - 💡 Let’s take the `float64` type as an example. Note that there’s an **infinite** number of real values between `math.SmallestNonzeroFloat64` (the `float64` minimum) and `math.MaxFloat64` (the `float64` maximum).
+  - Conversely, the `float64` type has a **finite** number of bits: **64**.
+  - Because making infinite values fit into a finite space isn’t possible, we have to work with **approximations**. Hence, we may lose **precision**. The same logic goes for the `float32` type.
+- ⚠️ Using the `==` operator to **compare** two floating-point numbers can lead to **inaccuracies**:
+  -  Instead, we should compare their difference to see if it is less than some small error value.
+  -  For example, the [testify](https://github.com/stretchr/testify) library has an `InDelta` function to assert that two values are within a given delta of each other.
+- ⚠️ The result of floating-point calculations depends on the actual **processor**.
+  - Most processors have a *floating-point unit* (FPU) to deal with such calculations. There is no guarantee that the result executed on one machine will be the **same on another machine** with a **different FPU**.
+  - Comparing two values using a delta can be a solution for implementing valid tests across different machines.
+- ⚠️ Also note that the **error can accumulate** in a **sequence** of floating-point operations:
+  - Keep in mind that the **order** of floating-point calculations can affect the **accuracy** of the result.
+- ⚠️ When performing a **chain** of **additions** and **subtractions**, we should group the operations to add or subtract values with a **similar order of magnitude** before adding or subtracting those with magnitudes that aren’t close.
+```go
+func f1(n int) float64 {
+    result := 10_000.
+    for i := 0; i < n; i++ {
+        result += 1.0001
+    }
+    return result
+}
+func f2(n int) float64 {
+    result := 0.
+    for i := 0; i < n; i++ {
+        result += 1.0001
+    }
+    return result + 10_000. // Because f2 adds 10,000, in the end it produces more accurate results than f1.
+}
+```
+- ⚠️ When performing floating-point calculations involving addition, subtraction, multiplication, or division, we have to complete the **multiplication** and **division** operations **first** to get better **accuracy**.
