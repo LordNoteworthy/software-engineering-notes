@@ -1881,7 +1881,7 @@ also be determined during compilation. Yet the if statement is evaluated at **ru
 - When operator `new` is unable to fulfill a memory request, it calls the `new-handler` function repeatedly until it can find enough memory; a well-designed `newhandler` function must do one of the following:
   - **Make more memory available**:  allocate a large block of memory at program start-up, then release it for use in the program the first time the `new-handler` is invoked.
   - **Install a different new-handler**: if the current `new-handler` can’t make any more memory available, perhaps it knows of a different `new-handler` that can.
-  - **Deinstall the new-handler**, i.e., pass the **null** pointer to `set_new_handler`. With no `new-handler` installed, operator new will **throw** an exception when memory allocation is unsuccessful.
+  - **De-install the new-handler**, i.e., pass the **null** pointer to `set_new_handler`. With no `new-handler` installed, operator new will **throw** an exception when memory allocation is unsuccessful.
   - **Throw an exception** of type `bad_alloc` or some type derived from `bad_alloc`. Such exceptions will not be caught by operator `new`, so they will **propagate** to the site originating the request for memory.
   - **Not return**, typically by calling `abort` or `exit`.
 - The **class’s** `set_new_handler` allows clients to specify the new-handler for the class (exactly like the standard `set_new_handler` allows clients to specify the global `new-handler`). The class’s operator `new` ensures that the **class-specific** new-handler is used in place of the **global** new-handler when memory for class objects is allocated:
@@ -1955,12 +1955,74 @@ operator deletes can check to see if the signatures are still intact.
 - In practice, we need to take care of issues such as: **alignment**.
   - Because C++ requires that all operator `news` return pointers that are suitably aligned for any data type.
 - Adding to what we mentioned above about when it can make sense to replace the default versions of `new` and `delete`:
-  - **To increase the speed of allocation and deallocation**: General purpose allocators are often (though not always) a lot slower than custom versions, especially if the custom versions are designed for objects of a particular type.
-    - If your app is **single-threaded**, but your compilers’ default memory management routines are **threadsafe**, you may be able to win measurable speed improvements by writing thread-unsafe allocators.
+  - **To increase the speed of allocation and de-allocation**: General purpose allocators are often (though not always) a lot slower than custom versions, especially if the custom versions are designed for objects of a particular type.
+    - If your app is **single-threaded**, but your compilers’ default memory management routines are **thread-safe**, you may be able to win measurable speed improvements by writing thread-unsafe allocators.
     - **To reduce the space overhead of default memory management**: General-purpose memory managers often use more memory, too. That’s because they often incur some overhead for each allocated block.
     - **To compensate for suboptimal alignment in the default allocator**: The operator `news` that ship with some compilers don’t guarantee eight-byte alignment for dynamic allocations of doubles. In such cases, replacing the default operator new with one that guarantees eight-byte alignment could yield big increases in program performance.
     - **To cluster related objects near one another.**: If you know that particular data structures are generally used together and you’d like to minimize the frequency of page faults when working on the data, it can make sense to create a **separate heap** for the data structures so they are clustered together on as few pages as possible.
-    - **To obtain unconventional behavior**: Sometimes you want operators `new` and `delete` to do something that the compiler-provided versions don’t offer. For example, you might want to allocate and deallocate blocks in shared memory, but have only a *C API* through which to manage that memory. Writing custom versions of `new` and `delete` would allow you to drape the C API in C++ clothing. As another example, you might write a custom operator `delete` that overwrites deallocated memory with **zeros** in order to increase the **security** of app data.
+    - **To obtain unconventional behavior**: Sometimes you want operators `new` and `delete` to do something that the compiler-provided versions don’t offer. For example, you might want to allocate and de-allocate blocks in shared memory, but have only a *C API* through which to manage that memory. Writing custom versions of `new` and `delete` would allow you to drape the C API in C++ clothing. As another example, you might write a custom operator `delete` that overwrites de-allocated memory with **zeros** in order to increase the **security** of app data.
 
 📆 Things to Remember
 - There are many valid reasons for writing custom versions of `new` and `delete`, including improving performance, debugging heap usage errors, and collecting heap usage information.
+
+### Item 51: Adhere to convention when writing new and delete
+
+- Implementing a **conformant** operator `new` requires having the right **return value**, calling the new-handling function when insufficient memory is available, and being prepared to cope with requests for no memory.
+- The **return value** part of operator `new` is easy. If you can supply the requested memory, you return a **pointer** to it. If you can’t, you follow the rule described in `Item 49` and throw an exception of type `bad_alloc`.
+- Curiously, C++ requires that operator `new` return a legitimate pointer even when **zero bytes** are requested 🤷.
+```cpp
+void* operator new(std::size_t size) throw(std::bad_alloc) { // your operator new might take additional params
+  using namespace std;
+  if (size == 0) { // handle 0-byte requests
+    size = 1; // by treating them as
+  } // 1-byte requests
+  while (true) {
+    // attempt to allocate size bytes;
+    if (the allocation was successful)
+      return (a pointer to the memory);
+    // allocation was unsuccessful; find out what the current new-handling function is (see below)
+    new_handler globalHandler = set_new_handler(0);
+    set_new_handler(globalHandler);
+    if (globalHandler) (*globalHandler)();
+    else throw std::bad_alloc();
+  }
+}
+```
+- Many people don’t realize that operator `new` member functions are inherited by **derived** classes.
+  - Because of inheritance, however, it is possible that the operator `new` in a **base** class will be called to allocate memory for an object of a **derived** class:
+    ```cpp
+    class Base {
+    public:
+      static void* operator new(std::size_t size) throw(std::bad_alloc);
+      ...
+    };
+
+    class Derived: public Base // Derived doesn’t declare
+      { ... }; // operator new
+      Derived *p = new Derived; // calls Base::operator new!
+    ```
+- If Base’s class-specific operator new wasn’t designed to cope with this — and chances are that it wasn’t — the best way for it to handle the situation is to slough off calls requesting the “wrong” amount of memory to the standard operator new, like this:
+  ```cpp
+  void* Base::operator new(std::size_t size) throw(std::bad_alloc) {
+  if (size != sizeof(Base)) // if size is “wrong,”
+    return ::operator new(size); // have standard operator new handle the request
+  ... // otherwise handle the request here
+  }
+  ```
+- If you’d like to control memory allocation for **arrays** on a per-class basis, you need to implement operator new’s array-specific cousin, operator `new[]`.
+  - You can’t even figure out how many objects will be in the array.
+  - You don’t know how big each object is.
+  - A base class’s operator` new[]` might, through inheritance, be called to allocate memory for an array of derived class objects, and **derived** class objects are usually **bigger** than **base** class objects.
+- For operator `delete`, things are simpler. About all you need to remember is that C++ guarantees it’s always **safe** to **delete** the **null** pointer, so you need to honor that guarantee.
+  ```cpp
+  void operator delete(void *rawMemory) throw() {
+    if (rawMemory == 0) return; // do nothing if the null
+      // pointer is being deleted de-allocate the memory pointed to by rawMemory;
+  }
+  ```
+
+📆 Things to Remember
+- operator `new` should contain an infinite loop trying to allocate memory, should call the new-handler if it can’t satisfy a memory request, and should handle requests for zero bytes. Class-specific versions should handle requests for larger blocks than expected.
+- operator `delete` should do nothing if passed a pointer that is null. Class-specific versions should handle blocks that are larger than expected.
+
+### Item 52: Write placement delete if you write placement new.
