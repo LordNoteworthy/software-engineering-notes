@@ -2026,3 +2026,65 @@ void* operator new(std::size_t size) throw(std::bad_alloc) { // your operator ne
 - operator `delete` should do nothing if passed a pointer that is null. Class-specific versions should handle blocks that are larger than expected.
 
 ### Item 52: Write placement delete if you write placement new.
+
+- When you write a `new` expression such as this: `Widget *pw = new Widget;`; two functions are called: one to operator `new` to **allocate** memory, a second to `Widget’s` default **constructor**.
+- Suppose that the first call succeeds, but the second call results in an exception being thrown. In that case, the memory allocation performed in step 1 must be undone:
+  - When you’re using only the **normal** forms of `new` and `delete`, then, the **runtime** system has no trouble finding the `delete` that knows how to undo what new did.
+  - The *which-delete-goes-with-this-new* issue does arise, however, when you start declaring **non-normal forms** of operator `new` — forms that take additional parameters.
+- When an operator `new` function takes **extra parameters** (other than the mandatory `size_t` argument), that function is known as a **placement** version of `new`.
+  - A particularly useful **placement** `new` is the one that takes a **pointer** specifying where an object should be constructed. That operator `new` looks like this:
+    ```cpp
+    void* operator new(std::size_t, void *pMemory) throw(); // placement new
+    ```
+  - This version of `new` is part of C++’s standard library, and you have access to it whenever you `#include <new>`. Among other things, this `new` is used inside `vector` to create objects in the `vector’s` **unused capacity**. It’s also the original placement `new` 💡.
+- For example, suppose you write a class-specific operator `new` that requires specification of an `ostream` to which allocation information should be logged, and you also write a normal class-specific operator `delete`:
+  ```cpp
+  class Widget {
+  public:
+  ...
+    static void* operator new(std::size_t size,std::ostream& logStream) throw(std::bad_alloc); // non-normal form of new
+    static void operator delete(void *pMemory, // normal classstd::size_t size) throw(); // specific form of delete
+  ...
+  };
+  ```
+  - ⚠️ The runtime system can’t really understand how the called version of operator `new` works in this case, so it can’t undo the allocation itself.
+  - Instead, the runtime system looks for a version of operator `delete` that takes the **same number** and **types** of extra arguments as operator `new`, and, if it finds it, that’s the one it calls.
+  - In this case, operator `new` takes an extra argument of type `ostream&`, so the corresponding operator `delete` would have this signature:
+    ```cpp
+    void operator delete(void*, std::ostream&) throw();
+    ```
+- However, consider what happens if no exception is thrown (which will usually be the case) and we get to a delete in client code:
+  ```cpp
+  delete pw; // invokes the normal operator delete
+  ```
+  - This calls the normal operator `delete`, not the **placement** version.
+  - Placement `delete` is called only if an exception arises from a **constructor** call that’s **coupled** to a call to a placement `new`.
+  - Applying `delete` to a pointer (such as `pw` above) never yields a call to a placement version of `delete`. Never ‼️
+  - This means that to forestall all memory leaks associated with placement versions of `new`, you **must provide** both the **normal** operator `delete` (for when no exception is thrown during construction) and a **placement** version that takes the same extra arguments as operator `new` does.
+- ⚠️ Incidentally, because member function names **hide** functions with the same names in outer scopes, you need to be careful to avoid having class-specific `news` hide other `news` (including the normal versions) that your clients expect.
+- For example, if you have a base class that declares only a placement version of operator `new`, clients will find that the normal form of `new` is **unavailable** to them:
+  ```cpp
+  class Base {
+  public:
+  // this new hides the normal global forms
+    static void* operator new(std::size_t size, std::ostream& logStream) throw(std::bad_alloc);
+  ...
+  };
+
+  Base *pb = new Base; // error! the normal form of operator new is hidden
+  Base *pb = new (std::cerr) Base; // fine, calls Base’s placement new
+  ```
+  - ⚠️ Similarly, operator `news` in **derived** classes **hide** both **global** and **inherited** versions of operator `new`.
+- Item 33 discusses this kind of name hiding in considerable detail, but for purposes of writing memory allocation functions, what you need to remember is that by default, C++ offers the following forms of operator new at global scope:
+  ```cpp
+  void* operator new(std::size_t) throw(std::bad_alloc); // normal new
+  void* operator new(std::size_t, void*) throw(); // placement new
+  void* operator new(std::size_t, // nothrow new —
+  const std::nothrow_t&) throw(); // see Item 49
+  ```
+  - If you declare any operator `news` in a class, you’ll hide all these standard forms. Unless you mean to prevent class clients from using these forms, be sure to make them available in addition to any custom operator `new` forms you create.
+  - For each operator `new` you make available, of course, be sure to offer the corresponding operator `delete`, too. If you want these functions to behave in the usual way, just have your class-specific versions call the global versions.
+
+📆 Things to Remember
+- When you write a placement version of operator `new`, be sure to write the corresponding placement version of operator `delete`. If you don’t, your program may experience subtle, intermittent memory leaks.
+- When you declare placement versions of `new` and `delete`, be sure not to unintentionally hide the normal versions of those functions.
