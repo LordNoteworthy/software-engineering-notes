@@ -2130,3 +2130,8 @@ void* operator new(std::size_t size) throw(std::bad_alloc) { // your operator ne
 - The second set of TR1 components consists of support technology for more sophisticated **template** programming techniques, including template **metaprogramming**:
   - Type traits
   - tr1::result_of
+
+📆 Things to Remember
+- The primary standard C++ library functionality consists of the STL, iostreams, and locales. The C89 standard library is also included.
+- TR1 adds support for smart pointers (e.g., tr1::shared_ptr), generalized function pointers (tr1::function), hash-based containers, regular expressions, and 10 other components.
+- TR1 itself is only a specification. To take advantage of TR1, you need an implementation. One source for implementations of TR1 components is *Boost*.
