@@ -2088,3 +2088,45 @@ void* operator new(std::size_t size) throw(std::bad_alloc) { // your operator ne
 📆 Things to Remember
 - When you write a placement version of operator `new`, be sure to write the corresponding placement version of operator `delete`. If you don’t, your program may experience subtle, intermittent memory leaks.
 - When you declare placement versions of `new` and `delete`, be sure not to unintentionally hide the normal versions of those functions.
+
+## Chapter 9: Miscellany
+
+### Item 53: Pay attention to compiler warnings.
+
+- Ignoring some compiler warning will almost certainly lead to **erroneous program behavior**, followed by a lot of **debugging** to discover something this compiler detected in the first place ‼️
+- After you gain experience with the warning messages from a particular compiler, you’ll learn to understand what the different messages mean (which is often very different from what they seem to mean, alas).
+  - Once you have that experience, you may choose to ignore a whole range of warnings, though it’s generally considered **better practice** to write code that compiles **warning-free**, even at the highest warning level
+  - Regardless, it’s important to make sure that before you **dismiss** a **warning**, you understand exactly what it’s trying to tell you ⚠️.
+
+📆 Things to Remember
+- Take compiler warnings **seriously**, and strive to compile warning-free at the maximum warning level supported by your compilers.
+- Don’t become **dependent** on compiler warnings, because different compilers warn about different things. Porting to a new compiler may eliminate warning messages you’ve come to rely on.
+
+### Item 54: Familiarize yourself with the standard library, including TR1
+
+> Many of the features introduced in TR1 were later incorporated into the C++11 standard with some enhancements and changes. C++11 made these features part of the standard library, which improved compiler support and provided a more stable foundation for developers. As a result, TR1 is mostly of historical interest today, with modern C++ code typically relying on the standardized versions introduced in C++11 and later standards.
+
+- Before surveying what’s in `TR1`, it’s worth reviewing the major parts of the standard C++ library specified by *C++98*:
+  - The Standard Template Library (STL)
+  - Iostreams
+  - **Support for internationalization
+  - Support for numeric processing
+  - An exception hierarchy
+  - C89’s standard library
+- TR1 specifies 14 new components, all are in the `std` namespace, more precisely, in the nested namespace `tr1`:
+  - Smart pointers
+  - tr1::function
+  - tr1::bind
+- I divide the remaining TR1 components into two sets. The first group offers fairly discrete standalone functionality
+  - Hash tables
+  - Regular expressions
+  - Tuples
+  - str1::array
+  - str1::mem_fn
+  - str1::reference_wrapper
+  - Random number generation
+  - Mathematical special function
+  - C99 compatibility extensions
+- The second set of TR1 components consists of support technology for more sophisticated **template** programming techniques, including template **metaprogramming**:
+  - Type traits
+  - tr1::result_of
