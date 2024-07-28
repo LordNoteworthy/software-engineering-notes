@@ -2109,29 +2109,39 @@ void* operator new(std::size_t size) throw(std::bad_alloc) { // your operator ne
 - Before surveying what’s in `TR1`, it’s worth reviewing the major parts of the standard C++ library specified by *C++98*:
   - The Standard Template Library (STL)
   - Iostreams
-  - **Support for internationalization
+  - Support for internationalization
   - Support for numeric processing
   - An exception hierarchy
   - C89’s standard library
 - TR1 specifies 14 new components, all are in the `std` namespace, more precisely, in the nested namespace `tr1`:
   - Smart pointers
-  - tr1::function
-  - tr1::bind
+  - `tr1::function`
+  - `tr1::bind`
 - I divide the remaining TR1 components into two sets. The first group offers fairly discrete standalone functionality
   - Hash tables
   - Regular expressions
   - Tuples
-  - str1::array
-  - str1::mem_fn
-  - str1::reference_wrapper
+  - `tr1::array`
+  - `tr1::mem_fn`
+  - `tr1::reference_wrapper`
   - Random number generation
   - Mathematical special function
   - C99 compatibility extensions
 - The second set of TR1 components consists of support technology for more sophisticated **template** programming techniques, including template **metaprogramming**:
   - Type traits
-  - tr1::result_of
+  - `tr1::result_of`
 
 📆 Things to Remember
 - The primary standard C++ library functionality consists of the STL, iostreams, and locales. The C89 standard library is also included.
 - TR1 adds support for smart pointers (e.g., tr1::shared_ptr), generalized function pointers (tr1::function), hash-based containers, regular expressions, and 10 other components.
 - TR1 itself is only a specification. To take advantage of TR1, you need an implementation. One source for implementations of TR1 components is *Boost*.
+
+### Item 55: Familiarize yourself with Boost
+
+- Boost was founded by committee members, and there continues to be strong **overlap** between the *Boost* and **committee** memberships.
+- Boost has always had as one of its goals to act as a **testing** ground for capabilities that could be added to **Standard C++**.
+- 14 new libraries introduced into C++ by TR1, more than two thirds are based on work done at Boost ‼️
+
+📆 Things to Remember
+- Boost is a community and web site for the development of free, open source, **peer-reviewed** C++ libraries. Boost plays an influential role in C++ standardization.
+- Boost offers implementations of many TR1 components, but it also offers many other libraries, too.
