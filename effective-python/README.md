@@ -887,13 +887,49 @@ respectively). These make it easy to create other types of derivative data struc
    ```
 - Achieving the same outcome is possible with `map` and `filter` if you wrap each call with a corresponding constructor. These statements get so long that you have to break them up across multiple lines, which is even **noisier** and should be **avoided**:
    ```python
-   alt_dict = dict(map(lambda x: (x, x**2),
-   filter(lambda x: x % 2 == 0, a)))
-   alt_set = set(map(lambda x: x**3,
-   filter(lambda x: x % 3 == 0, a)))
+   alt_dict = dict(map(lambda x: (x, x**2), filter(lambda x: x % 2 == 0, a)))
+   alt_set = set(map(lambda x: x**3, filter(lambda x: x % 3 == 0, a)))
    ```
 
 📆 Things to Remember
-- List comprehensions are **clearer** than the map and filter built-in functions because they **don’t require lambda** expressions.
-- List comprehensions allow you to easily skip items from the input list, a behavior that map doesn’t support without help from filter.
+- List comprehensions are **clearer** than the `map` and `filter` built-in functions because they **don’t require lambda** expressions.
+- List comprehensions allow you to easily skip items from the input list, a behavior that map doesn’t support without help from `filter`.
 - Dictionaries and sets may also be created using comprehensions.
+
+### Item 28: Avoid More Than Two Control Subexpressions in Comprehensions
+
+- Here is ane example of two `for` subexpressions. These subexpressions run in the order provided, from left to right:
+   ```python
+   matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+   flat = [x for row in matrix for x in row]
+   print(flat)
+   [1, 2, 3, 4, 5, 6, 7, 8, 9]
+   ```
+- Another example involves replicating the **two-level-deep layout** of the input list:
+   ```python
+   squared = [[x**2 for x in row] for row in matrix]
+   print(squared)
+   [[1, 4, 9], [16, 25, 36], [49, 64, 81]]
+   ```
+- If this comprehension included another loop, it would get so long that I’d have to **split** it over **multiple lines**.
+  - At this point, the multiline comprehension isn’t much **shorter** than the alternative
+- Multiple **conditions** at the same loop level have an implicit **and** expression.
+  - For example, say that I want to filter a list of numbers to only even values greater than 4. These two list comprehensions are equivalent:
+      ```python
+      a = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      b = [x for x in a if x > 4 if x % 2 == 0]
+      c = [x for x in a if x > 4 and x % 2 == 0]
+      ```
+- Conditions can be specified at each level of looping after the for subexpression.
+  - For example, say I want to filter a matrix so the only cells remaining are those divisible by 3 in rows that sum to 10 or higher.
+  ```python
+   matrix = [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
+   filtered = [[x for x in row if x % 3 == 0]
+               for row in matrix if sum(row) >= 10]
+   print(filtered)
+   [[6], [9]]
+   ```
+
+📆 Things to Remember
+- Comprehensions support multiple levels of loops and multiple conditions per loop level.
+- Comprehensions with more than two control sub-expressions are very difficult to read and should be avoided.
