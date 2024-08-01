@@ -620,3 +620,23 @@ func f2(n int) float64 {
 }
 ```
 - ⚠️ When performing floating-point calculations involving addition, subtraction, multiplication, or division, we have to complete the **multiplication** and **division** operations **first** to get better **accuracy**.
+
+### #20: Not understanding slice length and capacity
+
+- In Go, a **slice** is **backed** by an **array**. That means the slice’s data is stored **contiguously** in an array data structure.
+- A slice also handles the logic of adding an element if the backing array is **full** or shrinking the backing array if it’s almost **empty**.
+- The **length** is the number of elements the slice contains, whereas the **capacity** is the number of elements in the backing array.
+- ⚠️ Accessing an element outside the length range is **forbidden**, even though it’s already allocated in memory.
+- Adding an element to a full slice (length == capacity) leads to creating a new backing array with a **new capacity**, **copying** all the elements from the previous array, and updating the slice pointer to the new array.
+- 💡 In Go, a slice grows by **doubling** its size until it contains *1,024* elements, after which it grows by *25%*.
+- What happens with **slicing**? Slicing is an operation done on an array or a slice, providing a half-open range; the first index is included, whereas the second is excluded:
+  ```go
+    s1 := make([]int, 3, 6)
+    s2 := s1[1:3]
+    ```
+  - When `s2` is created by slicing `s1`, both slices **reference** the s**ame backing array**. However, `s2` starts from a different index.
+  - If we update `s1[1]` or `s2[0]`, the change is made to the same array, hence, visible in both slices.
+  - If we append an element to `s2`, the shared backing array is modified, but only the length of `s2` changes.
+  - if we keep appending elements to `s2` until the backing array is full, `s1` and `s2` will reference **two different arrays**. As `s1` is still a three-length, six-capacity slice, it still has some available buffer, so it keeps referencing the initial array. Also, the new backing array was made by copying the initial one from the first index of `s2`.
+
+### #21: Inefficient slice initialization
