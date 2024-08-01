@@ -640,3 +640,43 @@ func f2(n int) float64 {
   - if we keep appending elements to `s2` until the backing array is full, `s1` and `s2` will reference **two different arrays**. As `s1` is still a three-length, six-capacity slice, it still has some available buffer, so it keeps referencing the initial array. Also, the new backing array was made by copying the initial one from the first index of `s2`.
 
 ### #21: Inefficient slice initialization
+
+- Consider the following example:
+    ```go
+    func convert(foos []Foo) []Bar {
+        bars := make([]Bar, 0)
+        for _, foo := range foos {
+            bars = append(bars, fooToBar(foo))
+        }
+        return bars
+    }
+    ```
+- This logic of creating another array because the current one is **full** is repeated multiple times when we add a third element, a fifth, a ninth, and so on.
+  - Assuming the input slice has *1,000* elements, this algorithm requires allocating 10 backing arrays and copying more than 1,000 elements in total from one array to another.
+  -  This leads to additional effort for the *GC* to clean all these temporary backing arrays.
+- There are two different options for this:
+  - The first option is to reuse the same code but allocate the slice with a **given capacity**:
+    - Internally, Go preallocates an array of n elements. Therefore, adding up to n elements means reusing the **same backing array** and hence reducing the number of **allocations** drastically.
+    ```go
+    func convert(foos []Foo) []Bar {
+        n := len(foos)
+        bars := make([]Bar, 0, n)
+        for _, foo := range foos {
+            bars = append(bars, fooToBar(foo))
+        }
+        return bars
+    }
+    ```
+  - The second option is to allocate bars with a given length:
+    ```go
+    func convert(foos []Foo) []Bar {
+        n := len(foos)
+        bars := make([]Bar, n)
+        for i, foo := range foos {
+            bars[i] = fooToBar(foo)
+        }
+        return bars
+    }
+    ```
+    - Because we initialize the slice with a length, `n` elements are already allocated and initialized to the zero value of Bar. Hence, to set elements, we have to use, not `append` but `bars[i]`.
+    - This approach is faster because we avoid **repeated calls** to the built-in `append` function, which has a small **overhead** compared to a **direct assignment**.
