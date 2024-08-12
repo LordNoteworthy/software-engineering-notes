@@ -725,3 +725,21 @@ func log(i int, s []string) {
 - Hence, checking the length is the best option to follow as we can’t always control the approach taken by the functions we call (by checking if the return != `nil`).
 - 👍 When returning slices, it should make neither a semantic nor a technical **difference** if we return a `nil` or **empty** slice. Both **should mean the same thing** for the **callers**.
   - This principle is the same with **maps**. To check if a map is empty, check its length, not whether it’s `nil`.
+
+### #24: Not making slice copies correctly
+
+- To use `copy` effectively, it’s essential to understand that the number of elements copied to the destination slice corresponds to the **minimum** between:
+    - The source slice’s length
+    - The destination slice’s length
+- If we want to perform a complete `copy`, the destination slice must have a length **greater** than or **equal** to the source slice’s length. Here, we set up a length based on the source slice:
+    ```go
+    src := []int{0, 1, 2}
+    dst := make([]int, len(src))
+    copy(dst, src)
+    ```
+- `copy` built-in function isn’t the only way to copy slice elements. There are different alternatives, the best known being probably the following, which uses `append`:
+    ```go
+    src := []int{0, 1, 2}               // using copy is more idiomatic and, therefore, easier to
+    dst := append([]int(nil), src...)   // understand, even though it takes an extra line.
+
+    ```
