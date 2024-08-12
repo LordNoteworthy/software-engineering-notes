@@ -680,3 +680,48 @@ func f2(n int) float64 {
     ```
     - Because we initialize the slice with a length, `n` elements are already allocated and initialized to the zero value of Bar. Hence, to set elements, we have to use, not `append` but `bars[i]`.
     - This approach is faster because we avoid **repeated calls** to the built-in `append` function, which has a small **overhead** compared to a **direct assignment**.
+
+### #22: Being confused about nil vs. empty slices
+
+```go
+func main() {
+    var s []string
+    log(1, s)
+    s = []string(nil)
+    log(2, s)
+    s = []string{}
+    log(3, s)
+    s = make([]string, 0)
+    log(4, s)
+}
+
+func log(i int, s []string) {
+    fmt.Printf("%d: empty=%t\tnil=%t\n", i, len(s) == 0, s == nil)
+}
+```
+- This example prints the following:
+    ```sh
+    1: empty=true nil=true
+    2: empty=true nil=true
+    3: empty=true nil=false
+    4: empty=true nil=false
+    ```
+- ▶️ All the slices are **empty**, meaning the length equals 0. Therefore, a `nil` slice is also an **empty** slice. However, only the first two are `nil` slices.
+- 👍 If a function returns a slice, we **shouldn’t** do as in other languages and **return a non-nil** collection for **defensive** reasons.
+  - Because a `nil` slice doesn’t require any **allocation**, we should favor returning a `nil` slice instead of an **empty** slice.
+- A `nil` slice is (json) marshaled as a `null` element, whereas a **non-nil**, empty slice is marshaled as an **empty array**.
+- `reflect.DeepEqual` returns false if we compare a nil and a non-nil empty slice
+- All in all:
+    - `var s []string` if we aren’t sure about the final length and the slice can be empty.
+    - `[]string(nil)` as syntactic sugar to create a nil and empty slice.
+    - `make([]string, length)` if the future length is known.
+    - `[]string{}`, should be avoided if we initialize the slice without elements.
+
+### #23: Not properly checking if a slice is empty
+
+- We mentioned in the previous section that an empty slice has, by definition, a length of zero. Meanwhile, nil slices are always empty. Therefore, by checking the length of the slice, we cover all the scenarios:
+    - If the slice is nil, `len(operations) != 0` is **false**.
+    - If the slice isn’t nil but empty, `len(operations) != 0` is also **false**.
+- Hence, checking the length is the best option to follow as we can’t always control the approach taken by the functions we call (by checking if the return != `nil`).
+- 👍 When returning slices, it should make neither a semantic nor a technical **difference** if we return a `nil` or **empty** slice. Both **should mean the same thing** for the **callers**.
+  - This principle is the same with **maps**. To check if a map is empty, check its length, not whether it’s `nil`.
