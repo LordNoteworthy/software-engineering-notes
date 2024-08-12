@@ -933,3 +933,41 @@ respectively). These make it easy to create other types of derivative data struc
 📆 Things to Remember
 - Comprehensions support multiple levels of loops and multiple conditions per loop level.
 - Comprehensions with more than two control sub-expressions are very difficult to read and should be avoided.
+
+### Item 29: Avoid Repeated Work in Comprehensions by Using Assignment Expressions
+
+- Consider the example below:
+   ```py
+   stock = {
+      'nails': 125,
+      'screws': 35,
+      'wingnuts': 8,
+      'washers': 24,
+   }
+   order = ['screws', 'wingnuts', 'clips']
+   def get_batches(count, size):
+      return count // size
+
+   result = {}
+   for name in order:
+      count = stock.get(name, 0)
+      batches = get_batches(count, 8)
+   ```
+- Using an assignment expression as part of the comprehension:
+   ```py
+   found = {name: batches for name in order
+      if (batches := get_batches(stock.get(name, 0), 8))}
+   ```
+- It’s valid syntax to define an assignment expression in the **value** expression for a comprehension.
+  - By moving the assignment expression into the condition and then referencing the variable name it defined in the comprehension’s value expression
+   ```py
+   result = {name: tenth for name, count in stock.items()
+      if (tenth := count // 10) > 0}
+   ```
+- If a comprehension uses the **walrus** operator in the **value** part of the comprehension and **doesn’t** have a **condition**, it’ll **leak** the loop variable into the containing scope.
+- This leakage of the loop variable is similar to what happens with a normal for loop 🤷.
+- However, similar leakage doesn’t happen for the **loop variables** from comprehensions.
+
+📆 Things to Remember
+- Assignment expressions make it possible for comprehensions and generator expressions to reuse the value from one condition elsewhere in the same comprehension, which can improve readability and performance.
+- Although it’s possible to use an assignment expression outside of a comprehension or generator expression’s condition, you should avoid doing so.
