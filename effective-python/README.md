@@ -971,3 +971,22 @@ respectively). These make it easy to create other types of derivative data struc
 📆 Things to Remember
 - Assignment expressions make it possible for comprehensions and generator expressions to reuse the value from one condition elsewhere in the same comprehension, which can improve readability and performance.
 - Although it’s possible to use an assignment expression outside of a comprehension or generator expression’s condition, you should avoid doing so.
+
+### Item 30: Consider Generators Instead of Returning Lists
+
+- When called, a **generator** function does not actually run but instead **immediately returns** an **iterator**.
+- With each call to the `next` built-in function, the iterator **advances** the generator to its next `yield` expression.
+
+```python
+def index_words_iter(text):
+   if text:
+      yield 0
+   for index, letter in enumerate(text):
+      if letter == ' ':
+         yield index + 1
+```
+
+📆 Things to Remember
+- Using generators can be **clearer** than the alternative of having a function return a list of accumulated results.
+- The iterator returned by a generator produces the set of values passed to yield expressions within the generator function’s body.
+- Generators can produce a sequence of outputs for arbitrarily large inputs because their working **memory** doesn’t include all inputs and outputs.
