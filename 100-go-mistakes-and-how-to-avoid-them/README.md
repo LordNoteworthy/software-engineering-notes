@@ -743,3 +743,25 @@ func log(i int, s []string) {
     dst := append([]int(nil), src...)   // understand, even though it takes an extra line.
 
     ```
+
+### #25: Unexpected side effects using slice append
+
+- Consider the following example:
+    ```go
+    s1 := []int{1, 2, 3}
+    s2 := s1[1:2]
+    s3 := append(s2, 10)
+    // All the slices are backed by the same array
+    ```
+<p align="center"><img src="./assets/append-slice-problem.png" width="300px" height="auto"></p>
+
+- All the slices are backed by the same array 😮‍💨.
+  - Because `s2` in not full, the `append` function adds the element by updating the backing array and returning a slice having a length incremented by 1.
+- The `s1` slice’s content was **modified**, even though we did not update `s1[2]` or `s2[1]` **directly**. We should keep this in mind to avoid unintended consequences ⚠️.
+- Therefore, if we print all the slices, we get this output: `s1=[1 2 10], s2=[2], s3=[2 10]`.
+- If we want to protect against such side effects in function calls:
+    - The first is to pass a **copy** of the slice and then construct the resulting slice.
+      - 👎 Makes the code more complex to read and adds an extra copy.
+    - The second option can be used to limit the range of potential side effects to the first two elements only. This option involves the so-called **full slice expression**: `s[low:high:max]`.
+      - 👍 This statement creates a slice similar to the one created with `s[low:high]`, except that the resulting slice’s capacity is equal to `max - low`.
+- ▶️ When using slicing, we must remember that we can face a situation leading to unintended side effects. If the resulting slice has a **length** **smaller** than its **capacity**, `append` can **mutate** the original slice.
