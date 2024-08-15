@@ -765,3 +765,59 @@ func log(i int, s []string) {
     - The second option can be used to limit the range of potential side effects to the first two elements only. This option involves the so-called **full slice expression**: `s[low:high:max]`.
       - 👍 This statement creates a slice similar to the one created with `s[low:high]`, except that the resulting slice’s capacity is equal to `max - low`.
 - ▶️ When using slicing, we must remember that we can face a situation leading to unintended side effects. If the resulting slice has a **length** **smaller** than its **capacity**, `append` can **mutate** the original slice.
+
+### #26: Slices and memory leaks
+
+#### Leaking capacity
+
+- Consider the example below:
+    ```go
+    func consumeMessages() {
+        for {
+            msg := receiveMessage()
+            // Do something with msg
+            storeMessageType(getMessageType(msg))
+            // After a new loop iteration, msg is no longer used.
+            // However, its backing array will still be used by msg[:5]
+        }
+    }
+    func getMessageType(msg []byte) []byte {
+        return msg[:5]
+    }
+    ```
+- The slicing operation on msg using `msg[:5]` creates a five-length slice. However, its capacity remains the same as the initial slice. The remaining elements are still allocated in memory, even if eventually msg is **not referenced**.
+- What can we do to solve this issue? We can make a slice **copy** instead of slicing msg:
+    ```go
+    func getMessageType(msg []byte) []byte {
+        msgType := make([]byte, 5)
+        copy(msgType, msg)
+        return msgType
+    }
+    ```
+- Because we perform a copy, `msgType` is a **five-length**, **five-capacity** slice regardless of the size of the message received. Hence, we only store 5 bytes per message type.
+- ⚠️ Using the **full slice expression** isn’t a valid option (unless a future update of Go tackles this). The whole backing array still lives in memory 😢.
+- 👍 As a rule of thumb, remember that slicing a large slice or array can lead to potential **high memory consumption**. The remaining space won’t be reclaimed by the GC, and we can keep a large backing array despite using only a few elements. Using a slice **copy** is the solution to prevent such a case.
+
+#### Slice and pointers
+
+- Consider the example below:
+    ```go
+    func main() {
+        foos := make([]Foo, 1_000)
+        printAlloc()
+        for i := 0; i < len(foos); i++ {
+            foos[i] = Foo{ v: make([]byte, 1024*1024) }
+        }
+        printAlloc()
+        two := keepFirstTwoElementsOnly(foos)
+        runtime.GC()
+        printAlloc()
+        runtime.KeepAlive(two) // keep a ref to the two variable after the GC so that it won’t be collected
+    }
+    func keepFirstTwoElementsOnly(foos []Foo) []Foo {
+        return foos[:2]
+    }
+    ```
+- 🎯 It’s essential to keep this rule in mind when working with **slices**:
+  - if the element is a **pointer** or a **struct** with pointer fields, the elements won’t be reclaimed by the GC.
+- What can we do to solve this issue? We can create a **copy** of the slice. The second option if we want to keep the underlying capacity of 1,000 elements, which is to mark the slices of the remaining elements **explicitly** as `nil`.
