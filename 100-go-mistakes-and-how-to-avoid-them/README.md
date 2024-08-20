@@ -875,3 +875,24 @@ total number of elements in the `map`.
 - Another solution would be to change the `map` type to store an array pointer: `map[int]*[128]byte`:
   - It doesn’t solve the fact that we will have a significant **number of buckets**; however, each bucket entry will reserve the **size of a pointer** for the value instead of 128 bytes.
   - Also as an optimization, if a key or a value is **over 128 bytes**, Go won’t store it directly in the `map` bucket. Instead, Go stores a pointer to reference the key or the value.
+
+### #29: Comparing values incorrectly
+
+- It’s essential to understand how to use `==` and `!=` to make comparisons effectively. We can use these operators on operands that are comparable:
+    - **Booleans**: Compare whether two Booleans are equal.
+    - **Numerics** (int, float, and complex types): Compare whether two numerics are equal.
+    - **Strings**: Compare whether two strings are equal.
+    - **Channels**: Compare whether two channels were created by the same call to make or if both are `nil`.
+    - **Interfaces**: Compare whether two interfaces have identical dynamic types and equal dynamic values or if both are `nil`.
+    - **Pointers**: Compare whether two pointers point to the same value in memory or if both are `nil`.
+    - **Structs and arrays**: Compare whether they are composed of similar types.
+- With these behaviors in mind, what are the options if we have to compare two **slices**, two **maps**, or two **structs** containing **non-comparable** types?
+  - If we stick with the standard library, one option is to use run-time **reflection** with the `reflect` package.
+  - `reflect.DeepEqual` reports whether two elements are deeply equal by **recursively** traversing two values.
+- However, using `reflect.DeepEqual` has two catches ⚠️
+  - It makes the distinction between an **empty** and a **nil** collection.
+  - Because this function uses reflection, which introspects values at run time to discover how they are  formed, it has a **performance penalty** (is about 100 times slower than `==`).
+- If performance is a crucial factor, another option might be to implement our **own comparison method**.
+- In the context of unit tests, some other options are possible, such as using external libraries with [go-cmp](https://github.com/google/go-cmp) or [testify](https://github.com/stretchr/testify).
+- The standard library has some existing comparison methods. For example, we can use the optimized `bytes.Compare` to compare two slices of bytes. Before implementing a custom method, we
+need to make sure we don’t reinvent the wheel 🧠.
