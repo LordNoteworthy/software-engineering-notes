@@ -821,3 +821,16 @@ func log(i int, s []string) {
 - 🎯 It’s essential to keep this rule in mind when working with **slices**:
   - if the element is a **pointer** or a **struct** with pointer fields, the elements won’t be reclaimed by the GC.
 - What can we do to solve this issue? We can create a **copy** of the slice. The second option if we want to keep the underlying capacity of 1,000 elements, which is to mark the slices of the remaining elements **explicitly** as `nil`.
+
+### #27: Inefficient map initialization
+
+- When a `map` grows, it doubles its number of **buckets**. What are the conditions for a map to grow?
+    - The average number of items in the buckets (called the *load factor*) is greater than a constant value. This constant equals **6.5** (but it may change in future versions because it’s internal to Go).
+    - Too many buckets have **overflowed** (containing more than **eight** elements).
+- When a `map` **grows**, all the keys are dispatched again to all the buckets. This is why, in the worst-case scenario, inserting a key can be an *O(n)* operation, with `n` being the
+total number of elements in the `map`.
+- Like **slices**, we can use the make built-in function to provide an **initial size** when creating a `map`. For example, if we want to initialize a `map` that will contain 1 million elements, it can be done this way:
+    ```go
+    m := make(map[string]int, 1_000_000)` // ask Go runtime to allocate a map with room for at least 1m elements.
+    ```
+- By specifying a size, we provide a hint about the number of elements expected to go into the `map`. Internally, the map is created with an appropriate number of buckets to store 1 million elements. This saves a lot of **computation** time because the `map` won’t have to create buckets on the fly and handle **rebalancing buckets**.
