@@ -802,16 +802,23 @@ func log(i int, s []string) {
 
 - Consider the example below:
     ```go
+    type Foo struct {
+        v []byte
+    }
+
     func main() {
         foos := make([]Foo, 1_000)
         printAlloc()
+
         for i := 0; i < len(foos); i++ {
             foos[i] = Foo{ v: make([]byte, 1024*1024) }
         }
         printAlloc()
+
         two := keepFirstTwoElementsOnly(foos)
         runtime.GC()
         printAlloc()
+
         runtime.KeepAlive(two) // keep a ref to the two variable after the GC so that it won’t be collected
     }
     func keepFirstTwoElementsOnly(foos []Foo) []Foo {
@@ -827,6 +834,8 @@ func log(i int, s []string) {
 - When a `map` grows, it doubles its number of **buckets**. What are the conditions for a map to grow?
     - The average number of items in the buckets (called the *load factor*) is greater than a constant value. This constant equals **6.5** (but it may change in future versions because it’s internal to Go).
     - Too many buckets have **overflowed** (containing more than **eight** elements).
+<p align="center"><img src="./assets/maps-internals.png" width="400px" height="auto"></p>
+
 - When a `map` **grows**, all the keys are dispatched again to all the buckets. This is why, in the worst-case scenario, inserting a key can be an *O(n)* operation, with `n` being the
 total number of elements in the `map`.
 - Like **slices**, we can use the make built-in function to provide an **initial size** when creating a `map`. For example, if we want to initialize a `map` that will contain 1 million elements, it can be done this way:
@@ -834,3 +843,35 @@ total number of elements in the `map`.
     m := make(map[string]int, 1_000_000)` // ask Go runtime to allocate a map with room for at least 1m elements.
     ```
 - By specifying a size, we provide a hint about the number of elements expected to go into the `map`. Internally, the map is created with an appropriate number of buckets to store 1 million elements. This saves a lot of **computation** time because the `map` won’t have to create buckets on the fly and handle **rebalancing buckets**.
+
+### #28: Maps and memory leaks
+
+- Consider the example below:
+    ```go
+    n := 1_000_000
+    m := make(map[int][128]byte)
+    printAlloc()
+
+    for i := 0; i < n; i++ {
+        m[i] = randBytes()
+    }
+    printAlloc()
+
+    for i := 0; i < n; i++ {
+        delete(m, i)
+    }
+    runtime.GC()
+    printAlloc()
+
+    runtime.KeepAlive(m)
+    >>>>>>>>>
+    0 MB
+    461 MB
+    293 MB
+    ```
+- At first, the heap size is minimal. Then it grows significantly after having added 1 million elements to the `map`. But if we expected the heap size to decrease after removing all the elements, this isn’t how maps work in Go.
+- The reason is that the number of **buckets in a map cannot shrink**. Therefore, removing elements from a `map` doesn’t impact the number of existing buckets 😮‍💨; it just zeroes the slots in the buckets. 💡 A `map` can only grow and have more buckets; it never shrinks !
+- One solution could be to **re-create a copy** of the current map at a regular pace. For example, every hour, we can build a new `map`, copy all the elements, and release the previous one. The main drawback of this option is that following the copy and until the next garbage collection, we may **consume twice** the current **memory** for a short period.
+- Another solution would be to change the `map` type to store an array pointer: `map[int]*[128]byte`:
+  - It doesn’t solve the fact that we will have a significant **number of buckets**; however, each bucket entry will reserve the **size of a pointer** for the value instead of 128 bytes.
+  - Also as an optimization, if a key or a value is **over 128 bytes**, Go won’t store it directly in the `map` bucket. Instead, Go stores a pointer to reference the key or the value.
