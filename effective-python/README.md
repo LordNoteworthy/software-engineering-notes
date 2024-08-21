@@ -990,3 +990,55 @@ def index_words_iter(text):
 - Using generators can be **clearer** than the alternative of having a function return a list of accumulated results.
 - The iterator returned by a generator produces the set of values passed to yield expressions within the generator function’s body.
 - Generators can produce a sequence of outputs for arbitrarily large inputs because their working **memory** doesn’t include all inputs and outputs.
+
+### Item 31: Be Defensive When Iterating Over Arguments
+
+- Iterator produces its results only a **single** time. If you iterate over an **iterator** or a **generator** that has already raised a `StopIteration` exception, you won’t get any results the second time around:
+   ```py
+   it = read_visits('my_numbers.txt')
+   print(list(it))
+   print(list(it)) # Already exhausted
+   >>>
+   [15, 35, 80]
+   []
+   ```
+- Confusingly, you also won’t get **errors** when you iterate over an **already exhausted** iterator 🤷.
+- ⚠️ For loops, the `list` constructor, and many other functions throughout the Python standard library expect the `StopIteration` exception to be raised during normal operation. These
+functions can’t tell the difference between an iterator that has **no output** and an iterator that had output and is now **exhausted**.
+- Solutions 💡:
+  - Explicitly exhaust an input iterator and keep a copy of its entire contents in a `list` ▶️ memory overhead due to copying large input 👎.
+  - A better way to achieve the same result is to provide a new container class that implements the **iterator protocol*:
+      ```py
+      class ReadVisits:
+         def __init__(self, data_path):
+            self.data_path = data_path
+
+         def __iter__(self):
+            with open(self.data_path) as f:
+               for line in f:
+                  yield int(line)
+         ```
+   - The iterator protocol is how Python for loops and related expressions traverse the contents of a container type. When Python sees a statement like `for x in foo`, it actually calls `iter(foo)`. The `iter` built-in function calls the `foo.__iter__` special method in turn. The `__iter__` method must return an iterator object (which itself implements the `__next__` special method).
+   - The only 👎 of this approach is that it reads the input data **multiple times**.
+   - The protocol states that when an iterator is passed to the `iter` built-in function, `iter` returns the iterator **itself**. In contrast, when a container type is passed to iter, a `new` iterator object is returned each time. Thus, you can test an input value for this behavior and raise a `TypeError` to reject arguments that can’t be repeatedly iterated over:
+   ```py
+   def normalize_defensive(numbers):
+      if iter(numbers) is numbers: # An iterator -- bad!
+         raise TypeError('Must supply a container')
+      ...
+   ```
+   - Alternatively, the `collections.abc` built-in module defines an `Iterator` class that can be used in an `isinstance` test to recognize the potential problem:
+   ```py
+   from collections.abc import Iterator
+   def normalize_defensive(numbers):
+      if isinstance(numbers, Iterator): # Another way to check
+         raise TypeError('Must supply a container')
+   ...
+   ```
+
+📆 Things to Remember
+- Beware of functions and methods that iterate over input arguments multiple times. If these arguments are iterators, you may see strange behavior and missing values.
+- Python’s iterator protocol defines how containers and iterators interact with the `iter` and `next` built-in functions, for loops, and related expressions.
+- You can easily define your own iterable container type by implementing the `__iter__` method as a **generator**.
+- You can detect that a value is an iterator (instead of a container) if calling `iter` on it produces the same value as what you passed in. Alternatively, you can use the `isinstance` built-in function along
+with the `collections.abc.Iterator` class.
