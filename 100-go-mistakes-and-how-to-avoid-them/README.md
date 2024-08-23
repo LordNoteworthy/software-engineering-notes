@@ -896,3 +896,35 @@ total number of elements in the `map`.
 - In the context of unit tests, some other options are possible, such as using external libraries with [go-cmp](https://github.com/google/go-cmp) or [testify](https://github.com/stretchr/testify).
 - The standard library has some existing comparison methods. For example, we can use the optimized `bytes.Compare` to compare two slices of bytes. Before implementing a custom method, we
 need to make sure we don’t reinvent the wheel 🧠.
+
+
+## Chapter 4: Control structures
+
+### #30: Ignoring the fact that elements are copied in range loops
+
+- In Go, everything we **assign** is a **copy**:
+    - If we assign the result of a function returning a **struct**, it performs a **copy** of that struct.
+    - If we assign the result of a function returning a **pointer**, it performs a **copy** of the memory address.
+- It’s crucial ⚠️ to keep this in mind to avoid common mistakes, including those related to `range` loops. Indeed, when a `range` loop iterates over a data structure, it performs a
+**copy** of each element to the value variable.
+- So, what if we want to update the slice elements? There are two main options:
+    ```go
+    for i := range accounts {
+        accounts[i].balance += 1000
+    }
+    for i := 0; i < len(accounts); i++ {
+        accounts[i].balance += 1000
+    }
+    ```
+- Another option is to keep using the `range` loop and access the value but modify the slice type to a slice of account **pointers**:
+    ```go
+    accounts := []*account{
+        {balance: 100.},
+        {balance: 200.},
+        {balance: 300.},
+    }
+    for _, a := range accounts {
+        a.balance += 1000
+    }
+    ```
+    - 👎 Iterating over a slice of pointers may be **less efficient** for a CPU because of the lack of **predictability** (CPU caches).
