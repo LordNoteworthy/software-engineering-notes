@@ -1064,3 +1064,19 @@ progress:
 - Generator expressions avoid memory issues by producing outputs one at a time as iterators.
 - Generator expressions can be composed by passing the iterator from one generator expression into the for subexpression of another.
 - Generator expressions execute very quickly when chained together and are memory efficient.
+
+### Item 33: Compose Multiple Generators with yield from
+
+- The `yield from` expression allows you to **compose** multiple **nested generators** together into a single **combined** generator.
+   - 👍 Improved readability.
+   - 👍 `yield from` provides better **performance** than manually iterating nested generators and yielding their outputs.
+```py
+def child():
+   for i in range(1_000_000):
+      yield i
+def slow():
+   for i in child():
+      yield i
+def fast():
+   yield from child()
+```
