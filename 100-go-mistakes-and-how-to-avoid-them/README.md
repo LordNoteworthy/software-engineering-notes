@@ -897,7 +897,6 @@ total number of elements in the `map`.
 - The standard library has some existing comparison methods. For example, we can use the optimized `bytes.Compare` to compare two slices of bytes. Before implementing a custom method, we
 need to make sure we don’t reinvent the wheel 🧠.
 
-
 ## Chapter 4: Control structures
 
 ### #30: Ignoring the fact that elements are copied in range loops
@@ -928,3 +927,61 @@ need to make sure we don’t reinvent the wheel 🧠.
     }
     ```
     - 👎 Iterating over a slice of pointers may be **less efficient** for a CPU because of the lack of **predictability** (CPU caches).
+
+### #31: Ignoring how arguments are evaluated in range loops
+
+- Consider the example below:
+    ```go
+    s := []int{0, 1, 2}
+    for range s {
+        s = append(s, 10)
+    }
+    ```
+- When using a `range` loop, the provided expression is evaluated only once, **before** the **beginning** of the loop.
+- In this context, *evaluated* means the provided expression is copied to a **temporary** variable, and then `range` iterates over this variable. In this example, when the `s` expression is evaluated, the result is a **slice copy**:
+<p align="center"><img src="./assets/range-slice-copy.png" width="300px" height="auto"></p>
+
+- The behavior is **different** with a classic for `loop`.
+- The same logic applies to **channels** regarding how the `range` expression is evaluated.
+    ```go
+    ch1 := make(chan int, 3)
+    go func() {
+        ch1 <- 0
+        ch1 <- 1
+        ch1 <- 2
+        close(ch1)
+    }()
+
+    ch2 := make(chan int, 3)
+    go func() {
+        ch2 <- 10
+        ch2 <- 11
+        ch2 <- 12
+        close(ch2)
+    }()
+
+    ch := ch1
+    for v := range ch {
+        fmt.Println(v)
+        ch = ch2
+    }
+    ```
+  - The expression provided to `range` is a `ch` channel pointing to `ch1`. Hence, `range` evaluates `ch`, performs a **copy to a temporary** variable, and iterates over elements from this channel. Despite the `ch = ch2` statement, range keeps iterating over `ch1`, **not** `ch2.`
+- In **arrays**, the `range` expression is also evaluated **before** the **beginning** of the loop, what is assigned to the temporary loop variable is a **copy** of the array.
+- Let’s see this principle in action with the following example that updates a specific array index during the iteration:
+    ```go
+    a := [3]int{0, 1, 2}
+    for i, v := range a {
+        a[2] = 10
+        if i == 2 {
+            fmt.Println(v)
+        }
+    }
+    ```
+    - This code updates the last index to `10`. However, if we run this code, it does not print `10`; it prints `2`, instead.
+    - The loop doesn’t update the copy; it updates the **original** array ‼️
+    - If we want to print the actual value of the last element, we can do so in two ways:
+      - By accessing the element from its **index**: `fmt.Println(a[2])`.
+      - Using an array pointer: `for i, v := range &a`.
+        - We assign a copy of the array pointer to the temporary variable used by `range`. But because both pointers **reference** the **same array**.
+        - Doesn’t lead to copying the whole array, which may be something to keep in mind in case the array is **significantly large** 💡.
