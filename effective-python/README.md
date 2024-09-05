@@ -1080,3 +1080,71 @@ def slow():
 def fast():
    yield from child()
 ```
+
+### Item 34: Avoid Injecting Data into Generators with send
+
+- Python generators support the `send` method, which upgrades `yield` expressions into a **two-way channel**.
+- The `send` method can be used to provide **streaming** inputs to a generator at the same time it’s *yielding* outputs. Normally, when iterating a generator, the value of the `yield`
+expression is `None`:
+   ```py
+   def my_generator():
+      received = yield 1
+      print(f'received = {received}')
+
+   it = iter(my_generator())
+   output = next(it) # Get first generator output
+   print(f'output = {output}')
+
+   try:
+      next(it) # Run generator until it exits
+   except StopIteration:
+      pass
+   >>>
+   output = 1
+   received = None
+   ```
+- When the generator first starts, a `yield` expression has not been encountered yet, so the only valid value for calling `send` initially is `None` (any other argument would raise an exception at runtime) ‼️
+   ```py
+   it = iter(my_generator())
+   output = it.send(None) # Get first generator output
+   print(f'output = {output}')
+   try:
+      it.send('hello!') # Send value into the generator
+   except StopIteration:
+      pass
+   >>>
+   output = 1
+   received = hello!
+   ```
+- Here is a more concrete example:
+   ```py
+   def wave_modulating(steps):
+      step_size = 2 * math.pi / steps
+      amplitude = yield # Receive initial amplitude
+      for step in range(steps):
+         radians = step * step_size
+         fraction = math.sin(radians)
+         output = amplitude * fraction
+         amplitude = yield output # Receive next amplitude
+   def run_modulating(it):
+      amplitudes = [None, 7, 7, 7, 2, 2, 2, 2, 10, 10, 10, 10, 10]
+      for amplitude in amplitudes:
+         output = it.send(amplitude)
+         transmit(output)
+      run_modulating(wave_modulating(12))
+   ```
+- One problem with this code is that it’s **difficult** for new readers to **understand**:
+  - 👎 Using `yield` on the right side of an assignment statement isn’t **intuitive**, and it’s hard to see the connection between `yield` and `send` without already knowing the **details** of this advanced generator feature.
+- Given that the `yield` from expression handles the **simpler case**, you may expect it to also work properly along with the generator `send` method. Here, I try to use it this way by **composing multiple** calls to the `wave_modulating` generator together:
+   ```py
+   def complex_wave_modulating():
+      yield from wave_modulating(3)
+      yield from wave_modulating(4)
+      yield from wave_modulating(5)
+   run_modulating(complex_wave_modulating())
+   ```
+   - This works to some extent, but the result contains a big surprise: There are many `None` values in the output! Why does this happen?
+      - When each `yield` from expression finishes iterating over a nested generator, it moves on to the next one.
+      - Each nested generator starts with a bare `yield` expression - one without a value - in order to receive the initial amplitude from a generator `send` method call.
+      - This causes the parent generator to output a `None` value when it transitions between child generators.
+  - The easiest solution is to pass an iterator into the `wave` function.
