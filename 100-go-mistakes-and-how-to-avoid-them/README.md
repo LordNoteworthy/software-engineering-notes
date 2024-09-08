@@ -985,3 +985,44 @@ need to make sure we don’t reinvent the wheel 🧠.
       - Using an array pointer: `for i, v := range &a`.
         - We assign a copy of the array pointer to the temporary variable used by `range`. But because both pointers **reference** the **same array**.
         - Doesn’t lead to copying the whole array, which may be something to keep in mind in case the array is **significantly large** 💡.
+
+### #32: Ignoring the impact of using pointer elements in range loops
+
+- 💡 If we store **large** structs, and these structs are **frequently mutated**, we can use pointers instead to **avoid a copy** and an insertion for each mutation.
+- We will consider the following two structs:
+    ```go
+    // A Store that holds a map of Customer pointers
+    type Store struct {
+        m map[string]*Customer
+    }
+
+    // A Customer struct representing a customer
+    type Customer struct {
+        ID string
+        Balance float64
+    }
+    ```
+- The following method iterates over a slice of `Customer` elements and stores them in the `m` map:
+    ```go
+    func (s *Store) storeCustomers(customers []Customer) {
+        for _, customer := range customers {
+            s.m[customer.ID] = &customer
+        }
+    }
+    ```
+- Iterating over the customers slice using the `range` loop, regardless of the number of elements, creates a **single** customer variable with a **fixed** address ⚠️. We can verify this by printing the pointer address during each iteration:
+    ```go
+    func (s *Store) storeCustomers(customers []Customer) {
+        for _, customer := range customers {
+            fmt.Printf("%p\n", &customer)
+            s.m[customer.ID] = &customer
+        }
+    }
+    >>>
+    0xc000096020
+    0xc000096020
+    0xc000096020
+    ```
+- We can overcome this issue by: forcing the creation of a **local variable** in the loop’s scope (`current := customer`) or **creating a pointer** referencing a slice element via its **index** (`customer := &customers[i]`).
+- Both solutions are fine. Also note that we took a slice data structure as an input, but the problem
+would be similar with a map.
