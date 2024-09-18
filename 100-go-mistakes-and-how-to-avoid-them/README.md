@@ -1077,3 +1077,49 @@ Hence, when an element is added to a map during an iteration, it may be produced
         }
     ```
 - 📔 We can also use `continue` with a label to go to the next iteration of the labeled loop.
+
+### #35: Using defer inside a loop
+
+- Consider the following example:
+    ```go
+    func readFiles(ch <-chan string) error {
+        for path := range ch {
+            file, err := os.Open(path)
+            if err != nil {
+                return err
+            }
+            defer file.Close()
+            // Do something with file
+        }
+        return nil
+    ```
+- The `defer` calls are executed not during each loop iteration but when the `readFiles` function returns. If `readFiles` doesn’t return, the file descriptors will be kept open forever, causing **leaks**.
+- So, what are the options if we want to keep using `defer`?
+    1. We have to **create another surrounding function** around `defer` that is called during each iteration. For example, we can implement a `readFile` function holding the logic for each new file path received:
+        ```go
+        func readFile(path string) error {
+            file, err := os.Open(path)
+            if err != nil {
+                return err
+            }
+            defer file.Close()
+            // Do something with file
+            return nil
+        }
+        ```
+    2. Another approach could be to make the `readFile` function a **closure**:
+        ```go
+        func readFiles(ch <-chan string) error {
+            for path := range ch {
+                err := func() error {
+                    // ...
+                    defer file.Close()
+                    // ...
+                }()
+                if err != nil {
+                    return err
+                }
+            }
+            return nil
+        }
+        ````
