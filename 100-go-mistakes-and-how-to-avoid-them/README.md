@@ -1026,3 +1026,37 @@ need to make sure we don’t reinvent the wheel 🧠.
 - We can overcome this issue by: forcing the creation of a **local variable** in the loop’s scope (`current := customer`) or **creating a pointer** referencing a slice element via its **index** (`customer := &customers[i]`).
 - Both solutions are fine. Also note that we took a slice data structure as an input, but the problem
 would be similar with a map.
+
+### #33: Making wrong assumptions during map iterations
+
+### Ordering
+
+- Regarding ordering, we need to understand a few fundamental behaviors of the map data structure:
+    - It doesn’t keep the data **sorted by key** (a map isn’t based on a binary tree).
+    - It doesn’t **preserve the order** in which the data was added.
+- But can we at least expect the code to print the keys in the order in which they are currently stored in the map ? No, not even this 😮‍💨.
+- However, let’s note that using packages from the **standard library** or **external libraries** can lead to different behaviors. For example, when the `encoding/json` package **marshals** a map into `JSON`, it reorders the data **alphabetically** by keys, regardless of the insertion order.
+
+### Map insert during iteration
+
+- Consider the following example:
+    ```go
+    m := map[int]bool{
+        0: true,
+        1: false,
+        2: true,
+    }
+    for k, v := range m {
+        if v {
+            m[10+k] = true
+        }
+    }
+    fmt.Println(m) // The result of this code is unpredictable
+    ```
+To understand the reason, we have to read what the Go specification says about a new map entry during an iteration:
+
+> If a map entry is created during iteration, it may be produced during the iteration or skipped. The choice may vary for each entry created and from one iteration to the next.
+
+Hence, when an element is added to a map during an iteration, it may be produced during a follow-up iteration, or it may not ⚠️.
+
+👍 One solution is to create a copy of the map, like so: `m2 := copyMap(m)` and update `m2` instead.
