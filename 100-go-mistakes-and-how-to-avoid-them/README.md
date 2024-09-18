@@ -1060,3 +1060,20 @@ To understand the reason, we have to read what the Go specification says about a
 Hence, when an element is added to a map during an iteration, it may be produced during a follow-up iteration, or it may not ⚠️.
 
 👍 One solution is to create a copy of the map, like so: `m2 := copyMap(m)` and update `m2` instead.
+
+### 34: Ignoring how the break statement works
+
+- One essential rule to keep in mind is that a `break` statement terminates the execution of the **innermost** `for`, `switch`, or `select` statement.
+- So how can we write code that breaks the loop instead of the `switch` statement? The most idiomatic way is to use a label:
+    ```go
+    loop:
+        for i := 0; i < 5; i++ {
+            fmt.Printf("%d ", i)
+            switch i {
+                default:
+                case 2:
+                    break loop // Not a fancy goto statement !
+            }
+        }
+    ```
+- 📔 We can also use `continue` with a label to go to the next iteration of the labeled loop.
