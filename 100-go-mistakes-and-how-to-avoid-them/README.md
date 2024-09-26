@@ -1142,3 +1142,28 @@ Hence, when an element is added to a map during an iteration, it may be produced
     ```
 
 ### #37: Inaccurate string iteration
+
+- Let’s look at a concrete example. Here, we want to print the different `runes` in a string and their corresponding positions:
+    ```go
+    s := "hêllo"
+    for i := range s {
+        fmt.Printf("position %d: %c\n", i, s[i])
+    }
+    fmt.Printf("len=%d\n", len(s))
+    ```
+- We have to recognize that in this example, we don’t iterate over each `rune`; instead, we iterate over each **starting index** of a `rune`.
+- Printing `s[i]` doesn’t print the *ith* `rune`; it prints the `UTF-8` representation of the byte at index `i`. To fix this, we have to use the value element of the range operator:
+    ```go
+    s := "hêllo"
+    for i, r := range s {
+        fmt.Printf("position %d: %c\n", i, r)
+    }
+    ```
+- The other approach is to convert the string into a slice of `runes` and iterate over it:
+    ```go
+    s := "hêllo"
+    runes := []rune(s)
+    for i, r := range runes {
+        fmt.Printf("position %d: %c\n", i, r)
+    }
+    ```
