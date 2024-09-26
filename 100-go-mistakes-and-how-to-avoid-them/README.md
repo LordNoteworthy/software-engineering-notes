@@ -1123,3 +1123,22 @@ Hence, when an element is added to a map during an iteration, it may be produced
             return nil
         }
         ````
+## Chapter 5: Strings
+
+### #36: Not understanding the concept of a rune
+
+- 🎗️ In Go, a `rune` is a **Unicode code point**.
+- `UTF-8` encodes characters into 1 to 4 bytes, hence, up to 32 bits. This is why in Go, a `rune` is an **alias** of `int32`: `type rune = int32`.
+- 📌 In Go, a source code is encoded in `UTF-8`. So, all string literals are encoded into a sequence of bytes using `UTF-8`. However, a string is a **sequence of arbitrary bytes**; it’s not necessarily based on UTF-8.
+- A character isn’t always encoded into a **single byte**:
+    ```go
+    s := "汉"
+    fmt.Println(len(s)) // 3 - len built-in function applied on a string doesn’t return the number of characters; it returns the number of bytes.
+    ```
+- Conversely, we can create a string from a list of bytes. We mentioned that the `汉` character was encoded using three bytes, `0xE6`,` 0xB1`, and `0x89`:
+    ```go
+    s := string([]byte{0xE6, 0xB1, 0x89})
+    fmt.Printf("%s\n", s // 汉
+    ```
+
+### #37: Inaccurate string iteration
