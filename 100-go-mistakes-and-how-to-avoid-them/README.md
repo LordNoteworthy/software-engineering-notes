@@ -1167,3 +1167,14 @@ Hence, when an element is added to a map during an iteration, it may be produced
         fmt.Printf("position %d: %c\n", i, r)
     }
     ```
+
+### #38: Misusing trim functions
+
+- One common mistake made by Go developers when using the `strings` package is to **mix** `TrimRight` and `TrimSuffix`.
+- `TrimRight` iterates backward over each `rune`. If a rune is part of the provided set, the function removes it. If not, the function stops its iteration and returns the remaining string.
+- On the other hand, `TrimSuffix` returns a string without a provided trailing suffix.
+  - Also, removing the trailing suffix **isn’t a repeating** operation, so `TrimSuffix("123xoxo", "xo")` returns `123xo`.
+  - The principle is the same for the left-hand side of a string with `TrimLeft` and `TrimPrefix`.
+
+
+### #39: Under-optimized string concatenation
