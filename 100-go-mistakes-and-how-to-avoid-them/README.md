@@ -1178,3 +1178,28 @@ Hence, when an element is added to a map during an iteration, it may be produced
 
 
 ### #39: Under-optimized string concatenation
+
+- Concatenating strings using `+=` does not perform well when we need to concatenate many strings. 🎯 Don't forget one of the core characteristics of a string: its **immutability**. Therefore, each iteration doesn’t update the string; it reallocates a new string in memory, which significantly impacts performance.
+- Solution is to use `strings.Builder`. Using this struct, we can also append:
+    - A byte slice using `Write`.
+    - A single byte using `WriteByte`.
+    - A single rune using `WriteRune`.
+- **Internally**, `strings.Builder` holds a **byte slice**. Each call to `WriteString` results in a call to `append` on this slice.
+- There are two impacts:
+  - First, this struct shouldn’t be used **concurrently**, as the calls to `append` would lead to **race conditions**.
+  - The second impact is something that we saw in mistake #21, “Inefficient slice initialization”: if the future length of a slice is already known, we should **preallocate** it. For that purpose, `strings.Builder` exposes a method `Grow(n int)` to guarantee space for another `n` bytes.
+```go
+func concat(values []string) string {
+    total := 0
+    for i := 0; i < len(values); i++ {
+        total += len(values[i])
+    }
+    sb := strings.Builder{}
+    sb.Grow(total)
+    for _, value := range values {
+        _, _ = sb.WriteString(value)
+    }
+    return sb.String()
+}
+```
+- 👍 `strings.Builder` is the recommended solution to concatenate a list of strings. Usually, this solution should be used within a **loop**.
