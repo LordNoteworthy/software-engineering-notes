@@ -1209,3 +1209,34 @@ func concat(values []string) string {
 - When choosing to work with a `string` or a `[]byte`, most programmers tend to favor strings for convenience. But most I/O is actually done with `[]byte`.
 - There is a price to pay when converting a `[]byte` into a `string` and then converting a `string` into a `[]byte`. Memory-wise, each of these conversions requires an extra **allocation**. Indeed, even though a string is backed by a `[]byte`, converting a `[]byte` into a `string` requires a **copy** of the byte slice. It means a new memory allocation and a copy of all the bytes.
 - Indeed, all the **exported functions** of the `strings` package also have alternatives in the `bytes` package: `Split`, `Count`, `Contains`, `Index`, and so on. Hence, whether we’re doing I/O or not, we should first check whether we could implement a whole workflow using bytes instead of strings and avoid the price of additional conversions.
+
+### #41: Substrings and memory leaks
+
+- To extract a subset of a string, we can use the following syntax:
+    ```go
+    s1 := "Hello, World!"
+    s2 := s1[:5] // Hello
+    ```
+- `s2` is constructed as a substring of `s1`. This example creates a string from the **first five bytes**, not the **first five runes**. Hence, we shouldn’t use this syntax in the case of runes encoded with multiple bytes. Instead, we should convert the input string into a `[]rune` type first:
+    ```go
+    s1 := "Hêllo, World!"
+    s2 := string([]rune(s1)[:5]) // Hêllo
+    ```
+- When doing a substring operation, the Go specification doesn’t specify whether the resulting string and the one involved in the substring operation should share the
+same data. However, the standard Go compiler does let them **share the same backing array**, which is probably the best solution **memory-wise** and **performance-wise** as it prevents a new allocation and a copy.
+- We mentioned that log messages can be quite heavy. `log[:36] `will create a new string referencing the same backing array. Therefore, each uuid string that we store in
+memory will contain not just 36 bytes but the number of bytes in the initial log string: potentially, thousands of bytes.
+- How can we fix this? By making a **deep copy** of the substring so that the internal byte slice of uuid references a new backing array of only 36 bytes:
+    ```go
+    func (s store) handleLog(log string) error {
+        if len(log) < 36 {
+            return errors.New("log is not correctly formatted")
+        }
+        uuid := string([]byte(log[:36])) // The copy is performed by converting the substring into a []byte first and then into a string again.
+        s.store(uuid)
+        // Do something
+    }
+    ```
+- As of Go 1.18, the standard library also includes a solution with `strings.Clone` that returns a fresh copy of a string: `uuid := strings.Clone(log[:36])`.
+
+## Chapter 6: Functions and methods
