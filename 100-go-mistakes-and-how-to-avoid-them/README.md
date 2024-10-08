@@ -1266,3 +1266,33 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     - If the receiver is a basic type such as `int`, `float64`, or `string`.
 
 > ⚠️ Mixing receiver types should be avoided in general but is not forbidden in 100% of cases.
+
+### #43: Never using named result parameters
+
+- What are the rules regarding named result parameters?
+  - In most cases, using named result parameters in the context of an **interface definition** can increase **readability** without leading to any side effects. But there’s no strict rule in the context of a **method implementation**.
+- In some cases, named result parameters can also increase readability: for example, if two parameters have the same type:
+    ```go
+    type locator interface {
+        // Just by reading this code, can you guess what these two float32 results are?
+        // Perhaps they are a latitude and a longitude, but in which order? using named
+        // result parameters makes it clear.
+        getCoordinates(address string) (lat, lng float32, err error)
+    }
+    ```
+- In other cases, they can also be used for **convenience**:
+    ```go
+    func ReadFull(r io.Reader, buf []byte) (n int, err error) {
+        // Because both n and err are initialized to their zero value, the implementation is shorter.
+        for len(buf) > 0 && err == nil {
+            var nr int
+            nr, err = r.Read(buf)
+            n += nr
+            buf = buf[nr:]
+        }
+        return
+    }
+    ```
+- 👍 Therefore, we should use named result parameters sparingly when there’s a **clear benefit**.
+
+> 🎯 One note regarding naked returns (returns without arguments): they are considered acceptable in **short functions**; otherwise, they can harm readability because the reader must remember the outputs throughout the entire function. We should also be consistent within the scope of a function, using either only naked returns or only returns with arguments.
