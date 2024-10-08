@@ -1296,3 +1296,22 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 - 👍 Therefore, we should use named result parameters sparingly when there’s a **clear benefit**.
 
 > 🎯 One note regarding naked returns (returns without arguments): they are considered acceptable in **short functions**; otherwise, they can harm readability because the reader must remember the outputs throughout the entire function. We should also be consistent within the scope of a function, using either only naked returns or only returns with arguments.
+
+### #44: Unintended side effects with named result parameters
+
+- Here’s the new implementation of the `getCoordinates` method. Can you spot what’s wrong with this code?
+    ```go
+    func (l loc) getCoordinates(ctx context.Context, address string) (
+        lat, lng float32, err error) {
+        isValid := l.validateAddress(address)
+        if !isValid {
+            return 0, 0, errors.New("invalid address")
+        }
+        if ctx.Err() != nil {
+            return 0, 0, err
+        }
+        // Get and return coordinates
+    }
+    ```
+- The error might not be obvious at first glance. Here, the error returned in the if `ctx.Err() != nil` scope is `err`. But we haven’t assigned any value to the `err` variable. It’s still assigned to the zero value of an error type: `nil`. Hence, this code will always return a nil error ‼️
+- ⚠️ Remain cautious when using named result parameters, to avoid potential side effects.
