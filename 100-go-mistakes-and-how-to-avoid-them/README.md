@@ -1315,3 +1315,40 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     ```
 - The error might not be obvious at first glance. Here, the error returned in the if `ctx.Err() != nil` scope is `err`. But we haven’t assigned any value to the `err` variable. It’s still assigned to the zero value of an error type: `nil`. Hence, this code will always return a nil error ‼️
 - ⚠️ Remain cautious when using named result parameters, to avoid potential side effects.
+
+### #45: Returning a nil receiver
+
+- Consider the example below:
+    ```go
+    func (c Customer) Validate() error {
+        var m *MultiError
+        if c.Age < 0 {
+            m = &MultiError{}
+            m.Add(errors.New("age is negative"))
+        }
+        if c.Name == "" {
+            if m == nil {
+                m = &MultiError{}
+            }
+            m.Add(errors.New("name is nil"))
+        }
+        return m
+    }
+    ```
+- Now, let’s test this implementation by running a case with a valid `Customer`:
+    ```go
+    customer := Customer{Age: 33, Name: "John"}
+    if err := customer.Validate(); err != nil {
+        log.Fatalf("customer is invalid: %v", err)
+    }
+    // Output:
+    // > 2021/05/08 13:47:28 customer is invalid: <nil>
+    ```
+- 🎯 In Go, we have to know that a pointer receiver can be `nil`. In Go, a method is just **syntactic sugar** for a function whose **first parameter** is the receiver.
+- `m` is initialized to the zero value of a pointer: `nil`. Then, if all the checks are valid, the argument provided to the return statement isn’t `nil` **directly** but a **nil pointer** ⚠️.
+- Because a `nil` pointer is a **valid receiver**, **converting the result into an interface** won’t **yield** a `nil` value. In other words, the caller of `Validate` will always get a **non-nil** error.
+- To make this point clear, let’s remember that in Go, an interface is a **dispatch wrapper**. Here, the *wrappee* is `nil` (the `MultiError` pointer), whereas the *wrapper* isn’t (the error interface).
+- Therefore, regardless of the `Customer` provided, the caller of this function will always receive a non-nil error. 
+<p align="center"><img src="./assets/error-wrapper-is-not-nil.png" width="300px" height="auto"></p>
+
+- Remember: An interface converted from a `nil` pointer isn’t a `nil` interface ‼️ For that reason, when we have to return an **interface**, we should return not a `nil` **pointer** but a `nil` **value** directly.
