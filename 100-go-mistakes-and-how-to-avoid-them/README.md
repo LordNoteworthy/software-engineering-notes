@@ -1348,7 +1348,26 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 - `m` is initialized to the zero value of a pointer: `nil`. Then, if all the checks are valid, the argument provided to the return statement isn’t `nil` **directly** but a **nil pointer** ⚠️.
 - Because a `nil` pointer is a **valid receiver**, **converting the result into an interface** won’t **yield** a `nil` value. In other words, the caller of `Validate` will always get a **non-nil** error.
 - To make this point clear, let’s remember that in Go, an interface is a **dispatch wrapper**. Here, the *wrappee* is `nil` (the `MultiError` pointer), whereas the *wrapper* isn’t (the error interface).
-- Therefore, regardless of the `Customer` provided, the caller of this function will always receive a non-nil error. 
+- Therefore, regardless of the `Customer` provided, the caller of this function will always receive a non-nil error.
 <p align="center"><img src="./assets/error-wrapper-is-not-nil.png" width="300px" height="auto"></p>
 
 - Remember: An interface converted from a `nil` pointer isn’t a `nil` interface ‼️ For that reason, when we have to return an **interface**, we should return not a `nil` **pointer** but a `nil` **value** directly.
+
+### #46: Using a filename as a function input
+
+- When creating a new function that needs to read a file, passing a filename isn’t considered a best practice and can have negative effects, such as making **unit tests harder to write**.
+- In Go, the idiomatic way is to start from the **reader’s abstraction** 👍.
+- What are the benefits of this approach? First, this function **abstracts the data source**. Is it a file? An HTTP request? A socket input? It’s not important for the function. Because `*os.File` and the `Body` field of `http.Request` implement `io.Reader`, we can reuse the same function regardless of the input type.
+- Another benefit is related to **testing**. We mentioned that creating one file per test case could quickly become **cumbersome** 👎. Now that `countEmptyLines` accepts an `io.Reader`, we can implement unit tests by creating an `io.Reader` from a string:
+    ```go
+    func TestCountEmptyLines(t *testing.T) {
+        emptyLines, err := countEmptyLines(strings.NewReader(
+            `foo
+                bar
+                baz
+                `))
+        // Test logic
+    }
+    ```
+- In this test, we create an i`o.Reader` using `strings.NewReader` from a **string literal directly**. Therefore, we don’t have to create one file per test case.
+- Each test case can be **self-contained**, improving the test **readability** and **maintainability** as we don’t have to open another file to see the content.
