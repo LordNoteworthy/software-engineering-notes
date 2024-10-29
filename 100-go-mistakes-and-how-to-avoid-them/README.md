@@ -1369,5 +1369,68 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
         // Test logic
     }
     ```
-- In this test, we create an i`o.Reader` using `strings.NewReader` from a **string literal directly**. Therefore, we don’t have to create one file per test case.
+- In this test, we create an `io.Reader` using `strings.NewReader` from a **string literal directly**. Therefore, we don’t have to create one file per test case.
 - Each test case can be **self-contained**, improving the test **readability** and **maintainability** as we don’t have to open another file to see the content.
+
+### #47: Ignoring how defer arguments and receivers are evaluated
+
+#### Argument evaluation
+
+- Consider the example below:
+    ```go
+    func f() error {
+        var status string
+        defer notify(status)
+        defer incrementCounter(status)
+
+        if err := foo(); err != nil {
+            status = StatusErrorFoo
+            return err
+        }
+
+        if err := bar(); err != nil {
+            status = StatusErrorBar
+            return err
+        }
+        status = StatusSuccess
+        return nil
+    }
+    ```
+- We need to understand something crucial about argument evaluation in a `defer` function:
+  - The arguments are **evaluated right away**, not once the surrounding function returns ⚠️.
+- How can we solve this problem if we want to keep using `defer`? There are two leading solutions.
+    - The first solution is to pass a string **pointer** to the `defer` functions: `defer notify(&status)`.
+    - There’s another solution: calling a **closure** as a `defer` statement:
+        ```go
+        func f() error {
+            var status string
+            defer func() {
+                notify(status)
+                incrementCounter(status)
+            }()
+
+            // The rest of the function is unchanged
+        }
+        ```
+      - `status` is evaluated once the **closure is executed**, not when we call `defer`.
+      - This solution also works and doesn’t require `notify` and `incrementCounter` to change their **signature**.
+
+
+#### Pointer and value receivers
+
+- Consider the example below:
+    ```go
+    func main() {
+        s := Struct{id: "foo"}
+        defer s.print()
+        s.id = "bar"
+    }
+    type Struct struct {
+        id string
+    }
+    func (s Struct) print() {
+        fmt.Println(s.id)
+    }
+    ```
+- As with arguments, calling `defer` makes the receiver be evaluated **immediately**. Hence, `defer` delays the method’s execution with a struct that contains an `id` field equal to `foo`.
+- Conversely, if the pointer is a receiver, the potential changes to the receiver **after the call** to `defer` are visible.
