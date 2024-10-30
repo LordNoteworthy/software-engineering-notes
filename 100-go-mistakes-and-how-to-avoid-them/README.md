@@ -1434,3 +1434,35 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     ```
 - As with arguments, calling `defer` makes the receiver be evaluated **immediately**. Hence, `defer` delays the method’s execution with a struct that contains an `id` field equal to `foo`.
 - Conversely, if the pointer is a receiver, the potential changes to the receiver **after the call** to `defer` are visible.
+
+## Chapter 7: Error management
+
+### #48: Panicking
+
+
+- Example:
+    ```go
+    func main() {
+        defer func() {
+            if r := recover(); r != nil {
+                fmt.Println("recover", r)
+            }
+        }()
+
+        f()
+    }
+
+    func f() {
+        fmt.Println("a")
+        panic("foo")
+        fmt.Println("b")
+    }
+    ```
+- Once a panic is triggered, it continues up the call stack until either the current goroutine has returned or panic is caught with `recover`.
+- Panicking in Go should be used **sparingly**. We have seen two prominent cases:
+  - 👍 One to signal a **programmer error**:
+    - Invalid HTTP status code: `code < 100 || code > 999 `
+    - SQL driver is `nil` (`driver.Driver` is an interface) or has already been registered: `driver == nil`
+  - 👍 And another where our app fails to create a **mandatory dependency**. Hence, there are exceptional conditions that lead us to stop the app.
+      - We depend on a service that needs to validate the provided email address with `MustCompile`.
+  -  In most other cases, error management should be done with a function that returns a **proper error** type as the last return argument.
