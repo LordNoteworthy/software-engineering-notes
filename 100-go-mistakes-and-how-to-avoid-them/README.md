@@ -1527,3 +1527,26 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     }
     ```
 - ▶️ Regardless of whether the error is returned directly by the function we call or wrapped inside an error, `errors.As` will be able to recursively unwrap our main error and see if one of the errors is a specific type.
+
+### #51: Checking an error value inaccurately
+
+- A **sentinel error** is an error defined as a global variable:
+    ```go
+    import "errors"
+    var ErrFoo = errors.New("foo") // the convention is to start with Err followed by the error type
+    ```
+- The general principle behind sentinel errors is to convey **expected** error that clients will expect to check. Therefore, as general guidelines:
+  - 👍 **Expected** errors should be designed as error **values** (sentinel errors): `var ErrFoo = errors.New("foo")`.
+  - 👍 **Unexpected** errors should be designed as error **types**: `type BarError struct { … }`, with `BarError` implementing the error interface.
+- We have seen how `errors.As` is used to check an error against a **type**. With error **values**, we can use its counterpart: `errors.Is`:
+    ```go
+    err := query()
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+        // ...
+        } else {
+        // ...
+        }
+    }
+    ```
+- ▶️ if we use error wrapping in our app with the `%w` directive and `fmt.Errorf`, checking an error against a specific value should be done using` errors.Is` instead of `==`. Thus, even if the sentinel error is **wrapped**, `errors.Is` can recursively unwrap it and compare each error in the chain against the provided value.
