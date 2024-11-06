@@ -1466,3 +1466,44 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
   - 👍 And another where our app fails to create a **mandatory dependency**. Hence, there are exceptional conditions that lead us to stop the app.
       - We depend on a service that needs to validate the provided email address with `MustCompile`.
   -  In most other cases, error management should be done with a function that returns a **proper error** type as the last return argument.
+
+### #49: Ignoring when to wrap an error
+
+- Error wrapping is about wrapping or packing an error inside a wrapper container that also makes the source error available.
+- In general, the two main use cases for error wrapping are the following:
+    - Adding additional context to an error
+    - Marking an error as a specific error
+- Before Go 1.13, to wrap an error, the only option without using an external library was to create a custom error type:
+    ```go
+    type BarError struct {
+        Err error
+    }
+    func (b BarError) Error() string {
+        return "bar failed:" + b.Err.Error()
+    }
+    ```
+- To overcome this situation, Go 1.13 introduced the `%w` directive:
+    ```go
+    if err != nil {
+        return fmt.Errorf("bar failed: %w", err)
+    }
+    ```
+- The last option we will discuss is to use the `%v` directive, instead:
+    ```go
+    if err != nil {
+        return fmt.Errorf("bar failed: %v", err)
+    }
+    ```
+- The difference is that the error itself isn’t wrapped. We transform it into another error to add context, and the source error is no longer available.
+- Let’s review all the different options we tackled:
+    | Option                   | Extra Context                                                     | Marking an error | Source error available                                                 |
+    | ------------------------ | ----------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------- |
+    | Returning error directly | No                                                                | No               | Yes                                                                    |
+    | Custom error type        | Possible (if the error type contains a string field, for example) | Yes              | Possible (if the source error is exported or accessible via a method)  |
+    | fmt.Errorf with %w       | Yes                                                               | No               | Yes                                                                    |
+    | fmt.Errorf with %v       | Yes                                                               | No               | No                                                                     |
+- To summarize, when handling an error, we can decide to wrap it. Wrapping is about adding additional context to an error and/or marking an error as a specific type.
+  - If we need to mark an error, we should create a custom error type.
+  - However, if we just want to add extra context, we should use `fmt.Errorf` with the `%w` directive as it doesn’t require creating a new error type.
+- Yet, error wrapping creates potential **coupling** as it makes the source error available for the caller.
+  - If we want to prevent it, we shouldn’t use error wrapping but error transformation, for example, using `fmt.Errorf` with the `%v` directive.
