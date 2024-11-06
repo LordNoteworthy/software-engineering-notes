@@ -1507,3 +1507,23 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
   - However, if we just want to add extra context, we should use `fmt.Errorf` with the `%w` directive as it doesn’t require creating a new error type.
 - Yet, error wrapping creates potential **coupling** as it makes the source error available for the caller.
   - If we want to prevent it, we shouldn’t use error wrapping but error transformation, for example, using `fmt.Errorf` with the `%v` directive.
+
+### #50: Checking an error type inaccurately
+
+<p align="center"><img src="./assets/wrap-errors.png" width="500px" height="auto"></p>
+
+- Go 1.13 came with a directive to wrap an error and a way to check whether the **wrapped error** is of a certain type with `errors.As`.
+- This function **recursively** unwraps an error and returns true if an error in the chain matches the expected type.
+    ```go
+    // Get transaction ID
+    amount, err := getTransactionAmount(transactionID)
+    if err != nil {
+        if errors.As(err, &transientError{}) {
+            http.Error(w, err.Error(), http.StatusServiceUnavailable)
+        } else {
+            http.Error(w, err.Error(), http.StatusBadRequest)
+        }
+        return
+    }
+    ```
+- ▶️ Regardless of whether the error is returned directly by the function we call or wrapped inside an error, `errors.As` will be able to recursively unwrap our main error and see if one of the errors is a specific type.
