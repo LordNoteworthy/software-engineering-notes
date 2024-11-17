@@ -1550,3 +1550,43 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     }
     ```
 - ▶️ if we use error wrapping in our app with the `%w` directive and `fmt.Errorf`, checking an error against a specific value should be done using` errors.Is` instead of `==`. Thus, even if the sentinel error is **wrapped**, `errors.Is` can recursively unwrap it and compare each error in the chain against the provided value.
+
+### #52: Handling an error twice
+
+- Consider the log below:
+    ```
+    2021/06/01 20:35:12 invalid latitude: 200.000000
+    2021/06/01 20:35:12 failed to validate source coordinates
+    ```
+- Having **two log lines** for a **single error** is a problem. Why?
+  - Because it makes **debugging harder**. For example, if this function is called multiple times concurrently, the two messages may not be one after the other in the logs, making the debugging process more complex.
+- As a rule of thumb, an error should be handled **only once**. Logging an error is handling an error, and so is returning an error. Hence, we should **either log or return** an error, **never both** ❗.
+-  Let’s rewrite our implementation to handle errors only once:
+    ```go
+    func GetRoute(srcLat, srcLng, dstLat, dstLng float32) (Route, error) {
+        err := validateCoordinates(srcLat, srcLng)
+        if err != nil {
+            return Route{}, err
+        }
+        err = validateCoordinates(dstLat, dstLng)
+        if err != nil {
+            return Route{}, err
+        }
+        return getRoute(srcLat, srcLng, dstLat, dstLng)
+    }
+    ```
+- The issue with this implementation is that we lost the origin of the error, so we need to **add additional context**:
+- Let’s rewrite the latest version of our code using Go 1.13** error wrapping**:
+    ```go
+    func GetRoute(srcLat, srcLng, dstLat, dstLng float32) (Route, error) {
+        err := validateCoordinates(srcLat, srcLng)
+        if err != nil {
+            return Route{}, fmt.Errorf("failed to validate source coordinates: %w", err)
+        }
+        err = validateCoordinates(dstLat, dstLng)
+        if err != nil {
+            return Route{}, fmt.Errorf("failed to validate target coordinates: %w", err)
+        }
+        return getRoute(srcLat, srcLng, dstLat, dstLng)
+    }
+    ```
