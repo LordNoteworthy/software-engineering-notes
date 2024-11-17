@@ -1590,3 +1590,13 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
         return getRoute(srcLat, srcLng, dstLat, dstLng)
     }
     ```
+
+### #53: Not handling an error
+
+- When we want to ignore an error in Go, there’s only one way to write it:
+    ```go
+    _ = notify() // good
+    notify()     // bad
+    ```
+- 👍 It may be a good idea to write a comment that indicates the **rationale** for **why** the error is **ignored**.
+- Even if we are sure that an error can and should be ignored, we must do so **explicitly** by assigning it to the blank identifier. This way, a future reader will understand that we ignored the error intentionally.
