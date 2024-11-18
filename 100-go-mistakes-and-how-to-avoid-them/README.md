@@ -1600,3 +1600,59 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     ```
 - 👍 It may be a good idea to write a comment that indicates the **rationale** for **why** the error is **ignored**.
 - Even if we are sure that an error can and should be ignored, we must do so **explicitly** by assigning it to the blank identifier. This way, a future reader will understand that we ignored the error intentionally.
+
+### #54: Not handling defer errors
+
+- As discussed in the previous section, if we don’t want to handle the error, we should ignore it explicitly using the blank identifier:
+    ```go
+    defer func() {
+        _ = rows.Close()
+    }()
+    ```
+-  In this case, calling `Close()` returns an error when it fails to free a DB connection from the pool. Hence, ignoring this error is probably not what we want to do.
+- Most likely, a better option would be to log a message, or propagate it to the caller of `getBalance` so that they can decide how to handle it?
+    ```go
+    defer func() {
+        err := rows.Close()
+        if err != nil {
+            return err
+        }
+    }()
+    ```
+- This implementation doesn’t compile. Indeed, the `return` statement is associated with the **anonymous** `func()` function, not `getBalance`. If we want to tie the error returned by `getBalance` to the error caught in the `defer` call, we must use **named result parameters**. Let’s write the first version:
+    ```go
+    func getBalance(db *sql.DB, clientID string) (balance float32, err error) {
+        rows, err := db.Query(query, clientID)
+        if err != nil {
+            return 0, err
+        }
+        defer func() {
+         err = rows.Close()
+        }()
+        if rows.Next() {
+            err := rows.Scan(&balance)
+            if err != nil {
+                return 0, err
+            }
+            return balance, nil
+        }
+    }
+    ```
+- This code may look okay, but there’s a problem with it. If `rows.Scan` returns an error, `rows.Close` is executed anyway; but because this call overrides the error returned by `getBalance`, instead of returning an error, we may return a `nil` error if `rows.Close` returns successfully.
+- Here’s our final implementation of the anonymous function:
+    ```go
+    defer func() {
+        closeErr := rows.Close()
+        if err != nil {
+            if closeErr != nil {
+                log.Printf("failed to close rows: %v", err)
+            }
+            return
+        }
+        err = closeErr
+    }()
+    ```
+
+## Chapter 8 Concurrency: Foundations
+
+### #55: Mixing up concurrency and parallelism
