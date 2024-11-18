@@ -1656,3 +1656,9 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 ## Chapter 8 Concurrency: Foundations
 
 ### #55: Mixing up concurrency and parallelism
+
+- In a parallel implementation of a coffee shop, every part of the system is **independent**. The coffee shop should serve consumers twice as fast. <p align="center"><img src="./assets/parallelism.png" width="500px" height="auto"></p>
+- With this new design, we don’t make things **parallel**. But the overall structure is affected: we split a given role into two roles, and we introduce another queue. Unlike parallelism, which is about **doing the same thing multiple times at once**, concurrency is about **structure**. <p align="center"><img src="./assets/concurrency.png" width="500px" height="auto"></p>
+- We have increased the level of parallelism by introducing more machines. Again, the structure hasn’t changed; it remains a three-step design. But **throughput** should increase because the level of **contention** for the coffee-grinding threads should decrease.
+- ▶️ With this design, we can notice something important: **concurrency enables parallelism**. Indeed, concurrency provides a **structure** to solve a problem with parts that may be **parallelized**.
+- 🧠 In summary, concurrency and parallelism are different. Concurrency is about structure, and we can change a sequential implementation into a concurrent one by introducing different steps that separate **concurrent threads** can tackle. Meanwhile, parallelism is about execution, and we can use it at the step level by adding more parallel threads.
