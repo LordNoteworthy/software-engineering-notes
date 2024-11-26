@@ -1703,3 +1703,129 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 - Conversely, channels are a mechanic for **signaling** with or without data (chan struct{} or not).
 - **Coordination** or **ownership** transfer should be achieved via **channels**.
 - It’s important to know whether goroutines are parallel or concurrent because, in general, we need **mutexes** for **parallel goroutines** and **channels** for **concurrent** ones.
+
+### #58: Not understanding race problems
+
+#### Data races vs. race conditions
+
+- Data race occurs when two or more goroutines **simultaneously** access the **same memory** location and **at least one is writing**.
+- Here is an example where two goroutines increment a shared variable:
+    ```go
+    i := 0
+    go func() {
+        i++
+    }()
+    go func() {
+        i++
+    }()
+    ```
+- The first option is to make the increment operation **atomic**, meaning it’s done in a single operation. This prevents entangled running operations:
+    ```go
+    var i int64
+    go func() {
+        atomic.AddInt64(&i, 1)
+    }()
+    go func() {
+        atomic.AddInt64(&i, 1)
+    }()
+    ```
+- An atomic operation **can’t be interrupted**, thus preventing two accesses at the same time.
+- Or we can use a **mutex** to ensures that at most one goroutine accesses a so-called **critical section**.
+    ```go
+    i := 0
+    mutex := sync.Mutex{}
+    go func() {
+        mutex.Lock()
+        i++
+        mutex.Unlock()
+    }()
+    go func() {
+        mutex.Lock()
+        i++
+        mutex.Unlock()
+    }()
+    ```
+- Another possible option is to prevent sharing the same memory location and instead favor communication across the goroutines. For example, we can create a **channel** that each goroutine uses to produce the value of the increment:
+    ```go
+    i := 0
+    ch := make(chan int)
+    go func() {
+        ch <- 1
+    }()
+    go func() {
+        ch <- 1
+    }()
+    i += <-ch
+    i += <-ch
+    ```
+- Each goroutine sends a notification via the channel that we should increment i by 1. The parent goroutine collects the notifications and increments `i`. Because it’s the only goroutine writing to `i`, this solution is also **free of data races**.
+- Does a **data-race-free** application necessarily mean a deterministic result? Let’s explore this question with another example:
+    ```go
+    i := 0
+    mutex := sync.Mutex{}
+    go func() {
+        mutex.Lock()
+        defer mutex.Unlock()
+        i = 1
+    }()
+    go func() {
+        mutex.Lock()
+        defer mutex.Unlock()
+        i = 2
+    }()
+    ```
+- Depending on the execution order, `i` will eventually equal either 1 or 2. This example doesn’t lead to a **data race**. But it has a **race condition** ‼️
+- A **race condition** occurs when the behavior depends on the **sequence** or the **timing** of events that can’t be controlled. Here, the timing of events is the goroutines’ execution order.
+
+#### The Go memory model
+
+- The [Go memory model](https://golang.org/ref/mem) is a specification that defines the conditions under which a read from a variable in one goroutine can be guaranteed to happen after a write to the same variable in a different goroutine.
+- Let’s examine these guarantees:
+  1. Creating a goroutine happens before the goroutine’s execution begins. Therefore, reading a variable and then spinning up a new goroutine that writes to this variable doesn’t lead to a data race:
+    ```go
+    i := 0
+    go func() {
+        i++
+    }()
+    ```
+  2. Conversely, the exit of a goroutine isn’t guaranteed to happen before any event. Thus, the following example has a data race:
+    ```go
+    i := 0
+    go func() {
+        i++
+    }()
+    fmt.Println(i)
+    ```
+  3. A send on a channel happens before the corresponding receive from that channel completes. In the next example, a parent goroutine increments a variable before a send, while another goroutine reads it after a channel read:
+    ```go
+    i := 0
+    ch := make(chan struct{})
+    go func() {
+        <-ch
+        fmt.Println(i)
+    }()
+    i++
+    ch <- struct{}{}
+    ```
+  4. Closing a channel happens before a receive of this closure. The next example is similar to the previous one, except that instead of sending a message, we close the channel:
+    ```go
+    i := 0
+    ch := make(chan struct{})
+    go func() {
+        <-ch
+        fmt.Println(i)
+    }()
+    i++
+    close(ch)
+    ```
+  5. A receive from an **unbuffered** channel happens before the send on that channel completes.
+    ```go
+    i := 0
+    ch := make(chan struct{})
+    go func() {
+        i = 1
+        <-ch
+    }()
+    ch <- struct{}{}
+    fmt.Println(i)
+    ```
