@@ -1496,12 +1496,12 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     ```
 - The difference is that the error itself isn’t wrapped. We transform it into another error to add context, and the source error is no longer available.
 - Let’s review all the different options we tackled:
-    | Option                   | Extra Context                                                     | Marking an error | Source error available                                                 |
-    | ------------------------ | ----------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------- |
-    | Returning error directly | No                                                                | No               | Yes                                                                    |
-    | Custom error type        | Possible (if the error type contains a string field, for example) | Yes              | Possible (if the source error is exported or accessible via a method)  |
-    | fmt.Errorf with %w       | Yes                                                               | No               | Yes                                                                    |
-    | fmt.Errorf with %v       | Yes                                                               | No               | No                                                                     |
+    | Option                   | Extra Context                                                     | Marking an error | Source error available                                                |
+    | ------------------------ | ----------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------- |
+    | Returning error directly | No                                                                | No               | Yes                                                                   |
+    | Custom error type        | Possible (if the error type contains a string field, for example) | Yes              | Possible (if the source error is exported or accessible via a method) |
+    | fmt.Errorf with %w       | Yes                                                               | No               | Yes                                                                   |
+    | fmt.Errorf with %v       | Yes                                                               | No               | No                                                                    |
 - To summarize, when handling an error, we can decide to wrap it. Wrapping is about adding additional context to an error and/or marking an error as a specific type.
   - If we need to mark an error, we should create a custom error type.
   - However, if we just want to add extra context, we should use `fmt.Errorf` with the `%w` directive as it doesn’t require creating a new error type.
@@ -1662,3 +1662,32 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 - We have increased the level of parallelism by introducing more machines. Again, the structure hasn’t changed; it remains a three-step design. But **throughput** should increase because the level of **contention** for the coffee-grinding threads should decrease.
 - ▶️ With this design, we can notice something important: **concurrency enables parallelism**. Indeed, concurrency provides a **structure** to solve a problem with parts that may be **parallelized**.
 - 🧠 In summary, concurrency and parallelism are different. Concurrency is about structure, and we can change a sequential implementation into a concurrent one by introducing different steps that separate **concurrent threads** can tackle. Meanwhile, parallelism is about execution, and we can use it at the step level by adding more parallel threads.
+
+### #56: Thinking concurrency is always faster
+
+- As Go developers, we can’t create threads directly, but we can create **goroutines**, which can be thought of as application-level threads.
+- However, whereas an OS thread is **context-switched** on and off a CPU core by the **OS**, a goroutine is context-switched on and off an OS thread by the **Go runtime**.
+- Goroutines start with a small stack size of **2 KB** (as of Go 1.4 and later), which can dynamically grow and shrink as needed.
+- Context switching a goroutine versus a thread is about **80% to 90% faster**, depending on the architecture.
+- The Go [scheduler](http://mng.bz/N611) uses the following terminology:
+  - G—Goroutine
+  - M—OS thread (stands for machine)
+  - P—CPU core (stands for processor)
+- Each OS thread (`M`) is assigned to a CPU core (`P`) by the OS scheduler. Then, each goroutine (`G`) runs on an M.
+- The `GOMAXPROCS` variable defines the limit of `M`s in charge of executing user-level code simultaneously.
+- A goroutine has a simpler lifecycle than an OS thread. It can be doing one of the following:
+  - **Executing**  - The goroutine is scheduled on an M and executing its instructions.
+  - **Runnable** - The goroutine is waiting to be in an executing state.
+  - **Waiting** - The goroutine is stopped and pending something completing, such as a system call or a synchronization operation (such as acquiring a mutex).
+- The Go runtime handles two kinds of **queues**: one **local** queue per `P` and a **global** queue shared among all the `Ps`.
+<p align="center"><img src="./assets/go-scheduler.png" width="500px" height="auto"></p>
+
+- Every sixty-first execution, the Go scheduler will check whether goroutines from the global queue are available. If not, it will check its local queue. Meanwhile, if both the global and local queues are empty, the Go scheduler can pick up goroutines from other local queues.
+  - This principle in scheduling is called **work stealing**, and it allows an **underutilized** processor to actively look for another processor’s goroutines and steal some.
+-  Since Go 1.14, the Go scheduler is now **preemptive**: when a goroutine is running for a specific amount of time *(10 ms)*, it will be marked preemptible and can be context-switched off to be replaced by another goroutine. This allows a **long-running job** to be forced to **share CPU** time.
+- 🧠 If the workload that we want to parallelize is too **small**, meaning we’re going to compute it too **fast**, the benefit of distributing a job across cores is destroyed 🤒:
+  -  The time it takes to create a goroutine and have the scheduler execute it is much too high compared to directly merging a tiny number of items in the current goroutine.
+  -  Although goroutines are lightweight and faster to start than threads, we can still face cases where a workload is too small.
+- 📑 So, where should we go from here? We must keep in mind that **concurrency isn’t always faster** and shouldn’t be considered the default way to go for all problems.
+  - First, it makes things more complex. Also, modern CPUs have become incredibly efficient at executing **sequential** code and **predictable** code.
+  - For example, a **superscalar processor** can parallelize instruction execution over a single core with high efficiency.
