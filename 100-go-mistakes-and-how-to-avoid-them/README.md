@@ -1657,8 +1657,8 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 
 ### #55: Mixing up concurrency and parallelism
 
-- In a parallel implementation of a coffee shop, every part of the system is **independent**. The coffee shop should serve consumers twice as fast. <p align="center"><img src="./assets/parallelism.png" width="500px" height="auto"></p>
-- With this new design, we don’t make things **parallel**. But the overall structure is affected: we split a given role into two roles, and we introduce another queue. Unlike parallelism, which is about **doing the same thing multiple times at once**, concurrency is about **structure**. <p align="center"><img src="./assets/concurrency.png" width="500px" height="auto"></p>
+- In a parallel implementation of a coffee shop, every part of the system is **independent**. The coffee shop should serve consumers twice as fast. <p align="center"><img src="./assets/parallelism.png" width="400px" height="auto"></p>
+- With this new design, we don’t make things **parallel**. But the overall structure is affected: we split a given role into two roles, and we introduce another queue. Unlike parallelism, which is about **doing the same thing multiple times at once**, concurrency is about **structure**. <p align="center"><img src="./assets/concurrency.png" width="400px" height="auto"></p>
 - We have increased the level of parallelism by introducing more machines. Again, the structure hasn’t changed; it remains a three-step design. But **throughput** should increase because the level of **contention** for the coffee-grinding threads should decrease.
 - ▶️ With this design, we can notice something important: **concurrency enables parallelism**. Indeed, concurrency provides a **structure** to solve a problem with parts that may be **parallelized**.
 - 🧠 In summary, concurrency and parallelism are different. Concurrency is about structure, and we can change a sequential implementation into a concurrent one by introducing different steps that separate **concurrent threads** can tackle. Meanwhile, parallelism is about execution, and we can use it at the step level by adding more parallel threads.
@@ -1680,7 +1680,7 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
   - **Runnable** - The goroutine is waiting to be in an executing state.
   - **Waiting** - The goroutine is stopped and pending something completing, such as a system call or a synchronization operation (such as acquiring a mutex).
 - The Go runtime handles two kinds of **queues**: one **local** queue per `P` and a **global** queue shared among all the `Ps`.
-<p align="center"><img src="./assets/go-scheduler.png" width="500px" height="auto"></p>
+<p align="center"><img src="./assets/go-scheduler.png" width="600px" height="auto"></p>
 
 - Every sixty-first execution, the Go scheduler will check whether goroutines from the global queue are available. If not, it will check its local queue. Meanwhile, if both the global and local queues are empty, the Go scheduler can pick up goroutines from other local queues.
   - This principle in scheduling is called **work stealing**, and it allows an **underutilized** processor to actively look for another processor’s goroutines and steal some.
@@ -1691,3 +1691,15 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 - 📑 So, where should we go from here? We must keep in mind that **concurrency isn’t always faster** and shouldn’t be considered the default way to go for all problems.
   - First, it makes things more complex. Also, modern CPUs have become incredibly efficient at executing **sequential** code and **predictable** code.
   - For example, a **superscalar processor** can parallelize instruction execution over a single core with high efficiency.
+
+### #57: Being puzzled about when to use channels or mutexes
+
+<p align="center"><img src="./assets/mutex-vs-channels.png" width="400px" height="auto"></p>
+
+- **Synchronization** is enforced with **mutexes** but not with any channel types (not with buffered channels). Hence, in general, synchronization between parallel goroutines should be achieved via mutexes.
+- Conversely, in general, concurrent goroutines have to **coordinate and orchestrate**. For example, if `G3` needs to aggregate results from both `G1` and `G2`, `G1` and `G2` need to signal to `G3` that a new intermediate result is available. This coordination falls under the scope of **communication** — therefore, **channels**.
+- Regarding concurrent goroutines, there’s also the case where we want to transfer the ownership of a resource from one step (`G1` and `G2`) to another (`G3`); for example, if `G1` and `G2` are enriching a shared resource and at some point, we consider this job as complete. Here, we should use **channels** to **signal** that a specific resource is ready and handle the ownership transfer.
+- Mutexes and channels have different semantics. Whenever we want to **share** a state or **access a shared resource**, mutexes ensure exclusive access to this resource.
+- Conversely, channels are a mechanic for **signaling** with or without data (chan struct{} or not).
+- **Coordination** or **ownership** transfer should be achieved via **channels**.
+- It’s important to know whether goroutines are parallel or concurrent because, in general, we need **mutexes** for **parallel goroutines** and **channels** for **concurrent** ones.
