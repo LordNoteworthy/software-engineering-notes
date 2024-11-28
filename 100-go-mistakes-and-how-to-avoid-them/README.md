@@ -1829,3 +1829,46 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
     ch <- struct{}{}
     fmt.Println(i)
     ```
+
+### #59: Not understanding the concurrency impacts of a workload type
+
+- It it important to classify a **workload** in the context of a concurrent application. Let’s illustrate this alongside one concurrency pattern: **worker pooling**.
+- Doing so involves creating workers (goroutines) of a **fixed size** that poll tasks from a **common channel**:
+    ```go
+    func read(r io.Reader) (int, error) {
+        var count int64
+        wg := sync.WaitGroup{}
+        var n = 10 // define the pool size.
+        ch := make(chan []byte, n) // create a channel with the same capacity as the pool
+        wg.Add(n)
+        for i := 0; i < n; i++ {
+            go func() {
+                defer wg.Done()
+                for b := range ch {
+                    v := task(b)
+                    atomic.AddInt64(&count, int64(v))
+                }
+            }()
+        }
+        for {
+            b := make([]byte, 1024)
+            // Read from r to b
+            ch <- b
+        }
+        close(ch)
+        wg.Wait()
+        return int(count), nil
+    }
+    ```
+- If the workload is **I/O-bound**, the answer mainly depends on the external system. How many concurrent accesses can the system cope with if we want to maximize **throughput**?
+- If the workload is **CPU-bound**, a best practice is to rely on `GOMAXPROCS`. `GOMAXPROCS` is a variable that sets the number of OS threads allocated to running goroutines. By default, this value is set to the number of logical CPUs.
+- Let’s take a concrete example and say that we will run our application on a four-core machine: thus Go will instantiate four OS threads where goroutines will be executed. At first, things may not be ideal: we may face a scenario with four CPU cores and four goroutines but only one goroutine being executed 😐:
+<p align="center"><img src="./assets/one-goroutine-running.png" width="500px" height="auto"></p>
+
+- Eventually, given the work-stealing concept we already described, `P1` may steal goroutines from the local `P0` queue. However, since one of the main goals of the Go scheduler is to optimize resources (here, the distribution of the goroutines), we should end up in such a scenario given the nature of the workloads.
+<p align="center"><img src="./assets/at-most-two-goroutines-running.png" width="500px" height="auto"></p>
+
+- This scenario is still not optimal, because at most two goroutines are running. If there are enough resources in the machine, eventually, the OS should move M2 and M3 as shown: <p align="center"><img src="./assets/optimal-goroutines-gomaxproc.png" width="500px" height="auto"></p>
+
+- ⚠️ There is no guarantee about when this situation will happen. This global picture cannot be designed and requested by us (Go developers), However, as we have seen, we can enable it with favorable conditions in the case of CPUbound workloads: having a worker pool based on `GOMAXPROCS`.
+- Last but not least, let’s bear in mind that we should validate our assumptions via **benchmarks** in most cases. **Concurrency isn’t straightforward**, and it can be pretty easy to make hasty assumptions that turn out to be invalid 🙃.
