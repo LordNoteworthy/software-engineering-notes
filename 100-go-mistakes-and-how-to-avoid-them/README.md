@@ -1872,3 +1872,116 @@ large is large, benchmarking can be the solution; it’s pretty much impossible 
 
 - ⚠️ There is no guarantee about when this situation will happen. This global picture cannot be designed and requested by us (Go developers), However, as we have seen, we can enable it with favorable conditions in the case of CPUbound workloads: having a worker pool based on `GOMAXPROCS`.
 - Last but not least, let’s bear in mind that we should validate our assumptions via **benchmarks** in most cases. **Concurrency isn’t straightforward**, and it can be pretty easy to make hasty assumptions that turn out to be invalid 🙃.
+
+### #60: Misunderstanding Go contexts
+
+- A Context carries a **deadline**, a **cancellation signal**, and **other value**s across API boundaries.
+
+#### Deadline
+
+```go
+func (h publishHandler) publishPosition(position flight.Position) error {
+    ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+    defer cancel() //
+    return h.pub.Publish(ctx, position)
+}
+```
+What’s the rationale for calling the `cancel` function as a `defer` function?
+    - Internally, `context.WithTimeout` creates a **goroutine** that will be retained in memory for 4 seconds or until `cancel` is called.
+    - Therefore, calling `cancel` as a `defer` function means that when we exit the parent function, the context will be canceled, and the goroutine created will be stopped.
+    - It’s a **safeguard** so that when we return, we don’t leave retained objects in memory.
+
+#### Cancellation signals
+
+- A possible approach is to use `context.WithCancel`, which returns a context (first variable returned) that will cancel once the `cancel` function (second variable returned) is called:
+    ```go
+    func main() {
+        ctx, cancel := context.WithCancel(context.Background())
+        defer cancel()
+        go func() {
+            CreateFileWatcher(ctx, "foo.txt")
+        }()
+        // ...
+    }
+    ```
+- When `main` returns, it calls the `cancel` function to cancel the context passed to `CreateFileWatcher` so that the file descriptor is **closed gracefully**.
+
+#### Context values
+
+- A context conveying values can be created this way:
+    ```go
+    ctx := context.WithValue(parentCtx, "key", "value")
+    ```
+- Just like `context.WithTimeout`, `context.WithDeadline`, and `context.WithCancel`, `context.WithValue` is created from a **parent** context.
+- We can access the value using the `Value` method:
+    ```go
+    ctx := context.WithValue(context.Background(), "key", "value")
+    fmt.Println(ctx.Value("key"))
+    ```
+- The key and values provided are `any` types. Indeed, for the value, we want to pass `any `types . But why should the key be an empty interface as well and not a **string**, for example ❓
+  - That could lead to **collisions**: two functions from different packages could use the **same string** value as a key. Hence, the latter would **override** the former value.
+  - Consequently, a best practice while handling context keys is to create an **unexported** custom type:
+    ```go
+    package provider
+    type key string
+    const myCustomKey key = "key"
+    func f(ctx context.Context) {
+        ctx = context.WithValue(ctx, myCustomKey, "foo")
+    // ...
+    }
+    ```
+- Use cases:
+  - For example, if we use tracing, we may want different subfunctions to share the **same correlation ID**.
+  - Another example is if we want to implement an HTTP middleware.
+
+#### Catching a context cancellation
+
+- `context.Context` type exports a `Done` method that returns a receive-only notification channel: `<-chan struct{}`. This channel is closed when the work associated with the context should be canceled.
+- `context.Context` exports an `Err` method that returns nil if the `Done` channel isn’t yet closed. Otherwise, it returns a **non-nil** error explaining why the Done channel was closed: for example:
+    - A `context.Canceled` error if the channel was canceled
+    - A `context.DeadlineExceeded` error if the context’s deadline passed.
+- Let’s see a concrete example in which we want to keep receiving messages from a channel. Meanwhile, our implementation should be context aware and return if the provided context is done:
+    ```go
+    func handler(ctx context.Context, ch chan Message) error {
+        for {
+            select {
+            case msg := <-ch:
+                // Do something with msg
+            case <-ctx.Done():
+                return ctx.Err()
+            }
+        }
+    }
+    ```
+- Within a function that receives a context conveying a possible cancellation or timeout, the action of receiving or sending a message to a channel **shouldn’t** be done in a **blocking** way. For example, in the following function, we send a message to a channel and receive one from another channel:
+    ```go
+    func f(ctx context.Context) error {
+        // ...
+        ch1 <- struct{}{}
+        v := <-ch2
+        // ...
+    }
+- The problem with this function is that if the context is canceled or times out, we may have to wait until a message is sent or received, without benefit. Instead, we should use `select` to either wait for the channel actions to complete or wait for the context cancellation:
+    ```go
+    func f(ctx context.Context) error {
+        // ...
+        select {
+            case <-ctx.Done():
+                return ctx.Err()
+            case ch1 <- struct{}{}:
+        }
+        select {
+            case <-ctx.Done():
+                return ctx.Err()
+            case v := <-ch2:
+        // ...
+        }
+    }
+    ```
+- With this new version, if `ctx` is canceled or times out, we return immediately, without blocking the channel send or receive.
+- 👍 In general, a function that users wait for should take a context, as doing so allows upstream callers to decide when calling this function should be aborted.
+- 👍 When in doubt about which context to use, we should use `context.TODO()` instead of passing an empty context with `context.Background`. `context.TODO()` returns an empty context, but semantically, it conveys that the context to be used is either unclear or not yet available.
+
+## Chapter 9: Concurrency: Practice
+
+### #61: Propagating an inappropriate context
